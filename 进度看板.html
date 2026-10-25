@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 学习规划 · 进度看板</title>
+<style>
+  /* ================= 设计令牌（与今日面板一致） ================= */
+  :root{
+    --bg:#0d1117; --bg2:#090d12;
+    --card:#161b22; --card2:#1b2129; --card3:#0f141b;
+    --line:#232b36; --line2:#313b48;
+    --text:#e8eef5; --dim:#9aa7b4; --dim2:#7d8794;
+    --green:#3fb950; --blue:#58a6ff; --orange:#f0883e;
+    --red:#f85149; --purple:#a371f7; --gold:#e3b341;
+    --r-lg:16px; --r-md:13px; --r-sm:9px;
+    --shadow:0 10px 30px rgba(0,0,0,.34);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+  body{
+    background:
+      radial-gradient(1200px 540px at 10% -12%,#16202e 0%,transparent 62%),
+      radial-gradient(900px 440px at 100% -8%,#131a24 0%,transparent 58%),
+      var(--bg);
+    color:var(--text);padding:22px 20px 90px;line-height:1.66;font-size:15px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;
+  }
+  ::selection{background:rgba(88,166,255,.28)}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-track{background:var(--bg2)}
+  ::-webkit-scrollbar-thumb{background:#2b3543;border-radius:99px;border:2px solid var(--bg2)}
+  ::-webkit-scrollbar-thumb:hover{background:#3a4655}
+  .wrap{max-width:1500px;margin:0 auto}
+
+  header{position:relative;overflow:hidden;box-shadow:var(--shadow);
+    background:linear-gradient(135deg,#182130,#121823 58%,#0f141d);
+    border:1px solid var(--line);border-radius:var(--r-lg);padding:20px 22px}
+  header::after{content:"";position:absolute;left:0;right:0;top:0;height:2px;
+    background:linear-gradient(90deg,#3b9dff,#a371f7 50%,rgba(163,113,247,0))}
+  h1{font-size:23px;font-weight:700;letter-spacing:.2px}
+  .goal{color:#79c0ff;font-size:14px;margin-top:6px}
+  .sub2{color:var(--dim2);font-size:12.5px;margin-top:5px;line-height:1.7}
+
+  /* ================= 甘特图 ================= */
+  .gantt{margin-top:18px}
+  .lane{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+  .laneName{width:92px;font-size:12px;font-weight:700;text-align:right;flex:none;letter-spacing:.2px}
+  .laneBody{position:relative;flex:1;height:27px;background:#080b10;border-radius:8px;
+    border:1px solid var(--line);overflow:hidden;
+    background-image:linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);
+    background-size:calc(100% / 27) 100%;
+    box-shadow:inset 0 1px 3px rgba(0,0,0,.45)}
+  .seg{position:absolute;top:0;height:100%;display:flex;align-items:center;padding:0 8px;
+    font-size:11px;color:#07131f;font-weight:700;white-space:nowrap;overflow:hidden;
+    border-right:1px solid rgba(0,0,0,.22);cursor:default;letter-spacing:.1px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.18),inset 0 -2px 0 rgba(0,0,0,.14);
+    transition:filter .15s}
+  .seg:hover{filter:brightness(1.16)}
+  .axis{display:flex;justify-content:space-between;color:var(--dim2);font-size:11px;
+    margin:5px 0 0 102px;font-variant-numeric:tabular-nums}
+  .glegend{display:flex;flex-wrap:wrap;gap:6px 14px;margin:9px 0 0 102px;
+    font-size:11px;color:var(--dim2);align-items:center}
+  .glegend .lgTitle{color:#8b949e;font-weight:700;margin-right:4px}
+  .glegend .lg{display:flex;align-items:center;gap:5px}
+  .glegend .sw{width:10px;height:10px;border-radius:3px;display:inline-block;flex:none}
+  .seg .kind{position:absolute;top:0;right:3px;font-size:8.5px;line-height:1;
+    padding:2px 3px;border-radius:3px;background:rgba(0,0,0,.5);color:#fff;
+    font-weight:800;letter-spacing:.3px}
+  .seg.ml{border-bottom:3px solid #39d353}
+  .seg.dl{border-bottom:3px solid #a371f7}
+  .seg.proj{border-bottom:3px solid #f0883e}
+  .seg.pause{border-bottom:3px solid #484f58}
+
+  /* ================= 📦 材料采购日程（2027.09 之后面板管不到） ================= */
+  .pkgplan{margin:14px 0 0;background:#0f141a;border:1px solid var(--line);
+    border-radius:var(--r-md);padding:2px 15px}
+  .pkgplan > summary{cursor:pointer;font-size:13px;color:#e3b341;padding:11px 0;list-style:none;
+    user-select:none;font-weight:600}
+  .pkgplan > summary::-webkit-details-marker{display:none}
+  .pkgplan > summary::before{content:"▸ ";font-size:11px}
+  .pkgplan[open] > summary::before{content:"▾ "}
+  .pkgplan .prow{display:flex;gap:10px;font-size:12.5px;color:var(--dim);line-height:1.7;
+    padding:6px 0;border-top:1px dashed rgba(255,255,255,.055);align-items:baseline}
+  .pkgplan .prow:first-of-type{border-top:0}
+  .pkgplan .pw{flex:none;width:92px;font-weight:700;color:#e3b341;font-variant-numeric:tabular-nums}
+  .pkgplan .pt{color:#c6d0da}
+  .pkgplan .pno{margin:8px 0 12px;padding-top:9px;border-top:1px dashed rgba(255,255,255,.055);
+    font-size:12px;color:var(--dim);line-height:1.85}
+  .pkgplan .pno b{color:#ff9a91}
+  .pkgplan .pnote{font-size:12px;color:var(--dim2);margin:2px 0 8px;line-height:1.7}
+  @media (max-width:760px){ .pkgplan .prow{flex-direction:column;gap:2px} .pkgplan .pw{width:auto} }
+
+  /* ================= 总进度 ================= */
+  .barwrap{margin-top:18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .bar{flex:1;min-width:220px;height:13px;background:#080b10;border-radius:99px;overflow:hidden;
+    border:1px solid var(--line);box-shadow:inset 0 1px 2px rgba(0,0,0,.5)}
+  .bar > i{display:block;height:100%;width:0;border-radius:99px;
+    background:linear-gradient(90deg,#3b9dff,#3fb950);transition:width .35s ease;
+    box-shadow:0 0 12px rgba(63,185,80,.35)}
+  .pct{font-size:21px;font-weight:700;min-width:72px;text-align:right;
+    font-variant-numeric:tabular-nums;letter-spacing:.3px}
+
+  .next{margin-top:14px;background:#0c1622;border:1px solid #1d3a55;border-left:3px solid #3b9dff;
+    border-radius:var(--r-md);padding:11px 15px;font-size:13.5px;line-height:1.7}
+  .next b{color:#79c0ff}
+
+  /* ================= 筛选 chips ================= */
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 18px}
+  .chip{padding:7px 13px;border-radius:99px;border:1px solid var(--line);background:var(--card);
+    font-size:12.5px;cursor:pointer;user-select:none;display:flex;align-items:center;gap:7px;
+    transition:border-color .15s,background .15s,transform .1s}
+  .chip:hover{border-color:var(--line2);background:#1a212a}
+  .chip:active{transform:scale(.97)}
+  .chip.active{background:#1d2530;border-color:#44546b;box-shadow:0 0 0 1px rgba(88,166,255,.22) inset}
+  .chip .dot{width:8px;height:8px;border-radius:99px}
+  .chip .n{color:var(--dim2);font-size:11.5px;font-variant-numeric:tabular-nums}
+
+  /* ================= 卡片 ================= */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px}
+  .card{background:linear-gradient(180deg,#171d25,#141920);border:1px solid var(--line);
+    border-radius:var(--r-md);overflow:hidden;display:flex;flex-direction:column;
+    transition:border-color .18s,box-shadow .18s,transform .18s}
+  .card:hover{border-color:var(--line2);box-shadow:0 8px 22px rgba(0,0,0,.3);transform:translateY(-1px)}
+  .card .top{height:4px}
+  .inner{padding:14px 16px 16px;display:flex;flex-direction:column;height:100%}
+  .row1{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .when{font-size:11.5px;color:var(--dim2);font-variant-numeric:tabular-nums}
+  .tk{font-size:11px;padding:2px 8px;border-radius:99px;font-weight:700;letter-spacing:.2px}
+  .cnt{margin-left:auto;font-size:11.5px;color:var(--dim2);font-variant-numeric:tabular-nums}
+  .ttl{font-size:16px;font-weight:700;margin-top:5px;letter-spacing:.2px;line-height:1.45}
+  .deliv{margin-top:9px;font-size:12.5px;padding:7px 10px;border-radius:var(--r-sm);
+    background:var(--card3);border:1px solid var(--line);color:var(--dim);line-height:1.65}
+  .deliv b{color:#e8eef5;font-weight:600}
+  .ky{margin-top:8px;font-size:12px;color:#d29922;background:#1a1508;border:1px solid #3d2f0a;
+    border-radius:var(--r-sm);padding:6px 9px;line-height:1.6}
+  .ky b{color:#e3b341}
+  .tag{margin-top:8px;font-size:11.5px;color:#8b949e;background:var(--card3);
+    border:1px dashed #2a323c;border-radius:var(--r-sm);padding:6px 9px;line-height:1.6}
+
+  ul{list-style:none;margin-top:12px;display:flex;flex-direction:column;gap:1px}
+  li{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:#c6d0da;
+    padding:4px 6px;margin:0 -6px;border-radius:var(--r-sm);line-height:1.62;
+    transition:background .15s,opacity .2s}
+  li:hover{background:rgba(255,255,255,.03)}
+  li input{appearance:none;width:18px;height:18px;min-width:18px;margin-top:2px;
+    border:1.5px solid #3f4a5a;border-radius:6px;cursor:pointer;position:relative;background:#0a0e14;
+    transition:border-color .15s,background .15s,transform .1s}
+  li input:hover{border-color:#5f6f86}
+  li input:active{transform:scale(.92)}
+  li input:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+  li input:checked{background:var(--green);border-color:var(--green)}
+  li input:checked::after{content:"";position:absolute;left:5.5px;top:2.5px;width:4px;height:8.5px;
+    border:solid #06210f;border-width:0 2.5px 2.5px 0;transform:rotate(43deg);
+    animation:pop .18s ease-out}
+  @keyframes pop{from{transform:rotate(43deg) scale(.35);opacity:0}to{transform:rotate(43deg) scale(1);opacity:1}}
+  li.done{opacity:.55}
+  li.done:hover{opacity:.85;background:transparent}
+  li.done span,li.done .txt{color:var(--dim2);text-decoration:line-through;
+    text-decoration-color:rgba(125,135,148,.7)}
+  li span{cursor:pointer}
+
+  details{margin-top:11px;border-top:1px dashed #2a323c;padding-top:10px}
+  summary{cursor:pointer;font-size:12.5px;color:#e3b341;list-style:none;user-select:none;transition:color .15s}
+  summary:hover{color:#f0cc5f}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"▸ ";font-size:11px}
+  details[open] summary::before{content:"▾ "}
+  details ul li{font-size:12.5px}
+
+  .card.complete{border-color:#2f6244;background:linear-gradient(180deg,#131e17,#141920)}
+  .card.complete .ttl::after{content:" ✓";color:var(--green)}
+
+  .tools{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+  button{background:var(--card2);color:var(--text);border:1px solid var(--line);padding:9px 16px;
+    border-radius:var(--r-sm);cursor:pointer;font-size:13px;font-family:inherit;
+    transition:border-color .15s,background .15s}
+  button:hover{border-color:var(--line2);background:#222a34}
+  button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+  footer{margin-top:30px;color:var(--dim2);font-size:11.5px;text-align:center;line-height:1.9}
+
+  /* ---- 归档区（已并入/保留备查的历史卡） ---- */
+  .archbox{margin-top:22px}
+  .archbox > details{background:#0f141a;border:1px solid var(--line);border-radius:var(--r-md);padding:2px 14px}
+  .archbox summary{cursor:pointer;color:var(--dim2);font-size:13px;padding:11px 0;list-style:none}
+  .archbox summary::-webkit-details-marker{display:none}
+  .archbox summary::before{content:"▸ ";color:var(--dim2)}
+  .archbox details[open] summary::before{content:"▾ "}
+  .archbox .archgrid{margin:6px 0 14px;opacity:.62}
+  .archbox .card .top{opacity:.5}
+
+  /* ================= 响应式 ================= */
+  @media (max-width: 760px){
+    body{padding:14px 12px 56px}
+    h1{font-size:19px}
+    .grid{grid-template-columns:1fr}
+    .laneName{width:76px;font-size:11px}
+    .axis,.glegend{margin-left:86px}
+    .chips{gap:6px}
+    .chip{padding:5px 10px;font-size:12px}
+    .goal,.sub2{font-size:12px}
+    li{font-size:12.5px}
+    .tools button{padding:8px 12px;font-size:12px}
+    .pct{font-size:17px;min-width:56px}
+  }
+  @media (max-width: 430px){
+    h1{font-size:17px}
+    .chip{padding:4px 8px;font-size:11px}
+    .gantt{font-size:10px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none!important;animation:none!important}
+    html{scroll-behavior:auto}
+  }
+/* ---- 云同步（和今日面板同一套协议）---- */
+.syncbox{margin-top:13px;background:var(--card2,#1b2129);border:1px solid var(--line,#232b36);border-radius:10px;padding:14px 16px}
+.synchead{font-size:14px;font-weight:600;margin-bottom:8px}
+.synctip{font-size:12px;color:#8b949e;line-height:1.8;margin:6px 0 10px}
+.syncmsg{font-size:12px;min-height:16px;margin-top:6px;color:var(--green,#3fb950)}
+.syncauto{font-size:12px;color:#8b949e;display:block;margin-top:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>AI 学习规划 · 进度看板</h1>
+    <div style="margin:10px 0 14px"><a href="今日面板.html" target="_blank" rel="noopener"
+      style="display:inline-block;padding:8px 16px;background:#238636;color:#fff;text-decoration:none;border-radius:6px;font-weight:700;font-size:14px">→ 打开今日面板（今天做什么）</a></div>
+    <div class="goal">主线：2028.12 考研上岸（数学一 + 408）&nbsp;·&nbsp; 副线：蓝桥杯冲省一 + 2–3 个拿得出手的项目</div>
+    <div class="sub2">2025 级本科 · 大二上&nbsp;·&nbsp; Python 已学到「类与对象」，但缺「写得出来」的手感&nbsp;·&nbsp; GitHub：devi-long</div>
+
+    <div class="gantt" id="gantt"></div>
+    <div class="glegend">
+      <span class="lgTitle">AI 线图例</span>
+      <span class="lg"><i class="sw" style="background:#58a6ff"></i>工程 / 基础（Python、Git、pandas）</span>
+      <span class="lg"><i class="sw" style="background:#39d353"></i>机器学习 ML（数据划分、损失、过拟合、指标）</span>
+      <span class="lg"><i class="sw" style="background:#a371f7"></i>深度学习 DL（PyTorch、CNN、RNN、Transformer）</span>
+      <span class="lg"><i class="sw" style="background:#f0883e"></i>项目 / 作品集</span>
+      <span class="lg"><i class="sw" style="background:#484f58"></i>期末暂停</span>
+      <span class="lgTitle" style="margin-left:10px">算法线图例</span>
+      <span class="lg"><i class="sw" style="background:#f0883e"></i>基础课（AcWing L2）</span>
+      <span class="lg"><i class="sw" style="background:#d29922"></i>提高课（L3）</span>
+      <span class="lg"><i class="sw" style="background:#bc8cff"></i>进阶课（L4 / ICPC）</span>
+      <span class="lg"><i class="sw" style="background:#f85149"></i>省赛冲刺</span>
+    </div>
+
+    <div class="barwrap">
+      <div class="bar"><i id="barfill"></i></div>
+      <div class="pct" id="pct">0%</div>
+    </div>
+    <div class="sub2" id="count">已完成 0 / 0 项</div>
+    <div style="margin:8px 0 0">
+      <button onclick="syncOpen()" title="把勾选存到 GitHub Gist，换设备也能同步">☁️ 云同步 · 换设备后勾选不丢</button>
+      <span id="syncTopState" style="font-size:12px;color:#8b949e;margin-left:8px">未连接</span>
+    </div>
+
+    <div class="next" id="nextbox">下一件该做的事：<b>—</b></div>
+  </header>
+
+<details class="pkgplan">
+  <summary>📦 材料采购日程（面板只管到 W36 = 2027-06-27，之后的采购点看这里）</summary>
+  <div class="pnote">面板会在对应那周自动弹出采购卡（W1 / 12 月中 / 寒假前 / 3 月）；这张表是面板覆盖不到的后续采购。</div>
+  <div class="prow"><span class="pw">2027.07</span><span class="pt">张宇《660 题》—— 2027.7–8「基础篇扫尾 + 30 讲二刷」的题源</span></div>
+  <div class="prow"><span class="pw">2027.08</span><span class="pt">张宇《强化 36 讲》+《提高篇》—— <b>两本必须一起买</b>，提高篇只配强化用（基础轮绝对不动）</span></div>
+  <div class="prow"><span class="pw">2028.07</span><span class="pt">政治全套（<b>当年版</b>）+ 英一作文书 —— 政治 2028.7 才起，早买必然过时</span></div>
+  <div class="prow"><span class="pw">2028.09</span><span class="pt">英一近 10 年套卷 + 模拟卷 —— 冲刺阶段，最后 3 个月只做套卷</span></div>
+  <div class="pno"><b>明确别买：</b>六级新资料（已有 28 条够用到 2027-06）· 政治任何早期版本 · 张宇《提高篇》单独提前 ·
+    408 付费网课（B站「王道计算机考研」官方号的四科考点精讲免费且完整，配合王道书可直接用）· 显卡 / GPU（手写 GPT 用 Colab 免费额度）</div>
+</details>
+
+  <div class="pkgplan" style="border-color:rgba(248,81,73,.45);background:rgba(248,81,73,.06)">
+    <div class="pno" style="border:0;margin:0;padding:2px 0;color:#ffb3ae">
+      <b style="color:#ff7b72">⚠️ 考研报名四步 —— 不在学习计划里，只能自己盯，漏一步就没有补考：</b><br>
+      <b>2028.09 下旬</b> 预报名（研招网）· <b>2028.10</b> 正式报名 + 缴费 ·
+      <b>2028.11 上旬</b> 网上确认（传照片 / 学历学籍核验，不确认=报名无效）·
+      <b>2028.12 中旬</b> 打印准考证（多打 2 份）→ 初试 <b>2028.12 下旬</b><br>
+      同月还要盯：报考点选择（户籍 / 学籍所在地规则每年微调）、英一数学一的<b>自命题还是统考</b>确认、报考院校官网的复试科目。
+    </div>
+  </div>
+
+  <div class="syncbox" id="syncPanel" style="display:none">
+    <div class="synchead">☁️ 云同步 <span id="syncState">未连接</span></div>
+    <div id="syncSetup">
+      <p class="synctip">换设备 / 换浏览器后看板勾选不再丢：存进你自己的 GitHub Gist。<br>
+        和「今日面板」<b>共用同一个 token 和同一个云端文件</b> —— 在哪边连一次，两边都通。<br>
+        需要一个 token（只勾 <b>gist</b> 权限就够）：
+        <a href="https://github.com/settings/tokens/new?scopes=gist&amp;description=study-panel" target="_blank" rel="noopener">点这里创建</a></p>
+      <input id="syncToken" type="password" placeholder="粘贴 token（ghp_ 开头或 github_pat_ 开头）" autocomplete="off">
+      <button onclick="syncConnect()">连接 / 创建云端备份</button>
+    </div>
+    <div id="syncOps" style="display:none">
+      <button onclick="syncPush()">⬆️ 上传到云</button>
+      <button onclick="syncPull()">⬇️ 从云下载</button>
+      <button onclick="syncShowSetup()">🔑 换 token</button>
+      <button onclick="syncForget()">断开</button>
+      <label class="syncauto"><input type="checkbox" id="syncAuto" onchange="syncToggleAuto()"> 自动同步（改完 4 秒后自动上传；另一台设备的勾选在「切回页面 / 获得焦点」时自动拉下来，两台都开着时每 60 秒拉一次）</label>
+    </div>
+    <div id="syncDiag">
+      <button onclick="syncSelfTest()">🌐 测连通性</button>
+      <input id="syncApi" type="text" placeholder="接口地址（默认 https://api.github.com；被拦时填自己的代理，末尾不要 /）" autocomplete="off" onchange="syncApiSave()">
+      <p class="synctip">报错怎么读：<b>401 Bad credentials</b> = token 错/过期/少字符 · <b>403 not accessible</b> = 没勾 gist 权限 ·
+        <b>403 rate limit</b> = 这一小时的 5000 次配额用完了（等 reset，最多 1 小时） · <b>404</b> = 多半是网络被拦（不是找不到）·
+        <b>Failed to fetch / 超时</b> = 到不了 api.github.com（换网络或填代理）。拿不准就先点「🌐 测连通性」。</p>
+    </div>
+    <div id="syncMsg" class="syncmsg"></div>
+    <p class="synctip">✅ 合并规则：<b>逐项按修改时间合并</b> —— 本机改过的不会被云端盖掉，云端改过的会自动补进来；上传前先拉一次再合并。推送时会把今日面板的每日勾选一起带上，
+      所以不会互相抹掉；但两份各自都改过时，先想清楚保哪一份。<br>
+      拉取后如果今日面板已经开着，刷新一下那个页面才会看到新的每日勾选。</p>
+  </div>
+
+  <div class="chips" id="chips"></div>
+  <div class="grid" id="grid"></div>
+
+  <div class="archbox" id="archbox" style="display:none">
+    <details>
+      <summary id="archtitle">归档</summary>
+      <div class="grid archgrid" id="archlist"></div>
+    </details>
+  </div>
+
+  <div class="tools">
+    <button onclick="expandAll(true)">展开全部自测</button>
+    <button onclick="expandAll(false)">收起全部自测</button>
+    <button onclick="clearAll()">清空所有勾选</button>
+    <button onclick="window.print()">打印 / 存 PDF</button>
+    <button onclick="syncOpen()">☁️ 云同步（回到顶部）</button>
+  </div>
+
+
+
+  <footer>
+    进度自动保存在浏览器本地；换设备就点「☁️ 云同步」（和今日面板共用同一份云端备份）· 点顶部「线」可以只看某一条线（算法竞赛 / Python·AI / 考研）<br>
+    不写笔记：自测能不看资料答出来就打勾 · 每周五 git 提交 · 英语每天 30 分钟一天不断
+  </footer>
+</div>
+
+<script>
+/* ================================================================
+   三条线
+   ================================================================ */
+const TRACKS = {
+  algo:    {name:"算法竞赛",   color:"#f0883e", short:"算法"},
+  ai:      {name:"Python · AI", color:"#58a6ff", short:"AI"},
+  en:      {name:"考研·英语",   color:"#f85149", short:"英语"},
+  math:    {name:"考研·数学",   color:"#db6d28", short:"数学"},
+  cs408:   {name:"考研·408",    color:"#a371f7", short:"408"},
+  pol:     {name:"考研·政治",   color:"#db61a2", short:"政治"},
+  common:  {name:"通用铁律",   color:"#8b949e", short:"通用"},
+};
+
+/* 顶部三轨时间轴：start 是距 2026.10 的月数，len 是持续月数 */
+const SPAN = 27;   /* 2026.10 → 2028.12 */
+const LANES = [
+  {name:"算法竞赛", track:"algo", segs:[
+    /* ⭐ 2026-10-18【C 方案：全面重排】前期提速 + 不压缩其他四线 + 算法加时 + 目标「省一 + 试 ICPC」。
+       month 索引：2026.10 = 0 … 2027.6 = 8 … 2028.12 = 26（SPAN = 27）。
+       算法块：工作日 120 min / 周末 150 min / 期末缓冲 60 min → 全程 **457.5 h**（原 343.5 h）。
+       课程真实体量（官网核实 2026-10-18）：基础课 45 h / 7 块，提高课 104 h / 6 章，进阶课 86 h / 7 章。 */
+    {start:0,  len:2,  label:"基础课 ①②③ · 2h/天", kind:"base",
+     tip:"2026.10–11（W1–W5）：基础算法 / 数据结构 / 搜索与图论，53 题 + 蓝书。原 7 周压到 5 周（前期提速）"},
+    {start:2,  len:1,  label:"数学知识 + 贪心",     kind:"base",
+     tip:"2026.12（W7–W9）：基础课 ④数学知识下半 + ⑥贪心；期末缓冲期算法 60 min/天，主战场仍是期末复习"},
+    {start:3,  len:1,  label:"缓冲收尾 → DP 起步",  kind:"improve",
+     tip:"2027.1（W10–W14）：贪心收尾 + 数论贪心巩固 + 期末保手感；01-25 寒假起进入提高课"},
+    {start:4,  len:1,  label:"提高课 DP",           kind:"improve",
+     tip:"2027.2（W15–W18）：提高课第一章 动态规划 10 个模型，寒假 4 周、每天 2–2.5h"},
+    {start:5,  len:1,  label:"搜索 + 图论 + 冲刺",   kind:"contest",
+     tip:"2027.3（W19–W24）：第二章 搜索 2 周（原 1 周）+ 第三章图论基础 2 周 + 省赛冲刺 2 周"},
+    {start:6,  len:1,  label:"省赛 + 高级数据结构",  kind:"contest",
+     tip:"2027.4（W25–W27）：04-10 省赛 → 第四章 高级数据结构（树状数组 / 线段树 / 平衡树 / AC自动机）"},
+    {start:7,  len:1,  label:"数学 + 进阶课网络流",  kind:"icpc",
+     tip:"2027.5（W28–W33）：第五章数学 + 第六章基础算法 + 图论进阶（LCA/强连通）+ 进阶课网络流。省赛后转 ICPC 导向"},
+    {start:8,  len:1,  label:"进阶课数据结构 + 收尾", kind:"icpc",
+     tip:"2027.6（W34–W36）：Splay / 树链剖分 / 莫队 / CDQ / 点分治 / 线性基 + 组队与 5 小时模拟赛"},
+    {start:9,  len:18, label:"停止竞赛 · 维护 1–2h", kind:"pause",
+     tip:"2027.7 起：竞赛全停，时间交还数学强化与 408 二轮；只留每周 1–2h 保手感与复试机试"},
+  ]},  {name:"Python·AI", track:"ai", segs:[
+    {start:0,    len:1,    label:"Python 复习 · NumPy", kind:"eng",
+     tip:"2026.10（W1–W2）：Python 只复习 1 周（语法/函数/文件/异常/json/venv+git 一次过），W2 直接进 NumPy 矩阵化"},
+    {start:1,    len:0.75, label:"项目① 迷你检索", kind:"proj",
+     tip:"2026.11 上（W3–W5）：切段落 → 词频 → 余弦相似度 → Top-3 → 10 题评测集 → 发布（RAG 的地基）"},
+    {start:1.75, len:0.75, label:"pandas·画图·ML 起步", kind:"data",
+     tip:"2026.11 下–12 上（W6–W8）：pandas / matplotlib + 训练集验证集测试集、K 折、MSE 与交叉熵"},
+    {start:2.5,  len:0.75, label:"期末轻量复习", kind:"eng",
+     tip:"2026.12 中–2027.1 初（W9–W11，30 min/天）：重写小程序 / 默写 NumPy 小抄 / 读 RAG 入门 / 定寒假计划"},
+    {start:3.25, len:0.75, label:"期末暂停", kind:"pause",
+     tip:"2027.1（01-04~01-24，W12–W14）：期末优先，AI 暂停"},
+    {start:4,    len:0.75, label:"PyTorch · MNIST", kind:"dl",
+     tip:"2027.1 下–2 中（W15–W18）：PyTorch(cu128) → nn.Module → MNIST 全连接 → 正则化（dropout/weight decay/早停）"},
+    {start:4.75, len:0.25, label:"CNN 原理", kind:"dl",
+     tip:"2027.2 下（W19）：卷积 / stride / padding / 输出尺寸公式 / LeNet"},
+    {start:5,    len:0.75, label:"图像分类·工程化·lr 调度", kind:"dl",
+     tip:"2027.3（W20–W22）：换数据集做图像分类 → TensorBoard 工程化 → lr 调度 + 训练诊断"},
+    {start:5.75, len:0.5,  label:"RNN → Transformer 原理", kind:"dl",
+     tip:"2027.3 下–4 初（W23–W24）：RNN/LSTM → 3Blue1Brown + 手写 attention（顺序已修正：RNN 在前）"},
+    {start:6.25, len:0.5,  label:"Transformer 搭建·预训练", kind:"dl",
+     tip:"2027.4 中（W25–W26）：搭 mini Transformer → 小语言模型 → 预训练/微调概念"},
+    {start:6.75, len:0.75, label:"项目② 图像分类", kind:"proj",
+     tip:"2027.4 下–5 中（W27–W30）：v1 baseline → 改进点 → v2 迁移学习(ResNet) → 消融 + 错误分析"},
+    {start:7.5,  len:0.75, label:"作品集·复习·面试", kind:"proj",
+     tip:"2027.5 下–6 初（W31–W33）：文档/作品集一次收口 + 损失优化器指标复习 + 面试 20 题 + 36 周总结"},
+    {start:8.25, len:0.75, label:"项目③ RAG", kind:"proj",
+     tip:"2027.6（W34–W36）：定方向（文档问答）→ 向量库 FAISS/Chroma → 项目① 升级成 RAG → FastAPI 部署"},
+    {start:9,    len:2,    label:"手写 GPT + 项目③ 深化", kind:"dl",
+     tip:"2027.7–8（暑假，面板之后）：跟 Karpathy 敲 GPT + 项目③ 加多模态"},
+    {start:11,   len:3,    label:"检索进阶 + 主力作品", kind:"proj",
+     tip:"2027.9–11：向量库进阶 → ★ 多模态文档 RAG（可部署 + 评测数字）→ LoRA 微调"},
+    {start:14,   len:3,    label:"Agent · 部署 · 微调", kind:"proj",
+     tip:"2027.12–2028.2：Agent + 部署 → LoRA/QLoRA 微调 → 作品集 + 复试话术"},
+    {start:17,   len:2,    label:"机器学习补全（面试向）", kind:"ml",
+     tip:"2028.3–4：sklearn 实战 —— 线性/逻辑回归 → 决策树/随机森林 → XGBoost → 聚类/PCA → 评估调参 → 偏差方差与正则化。考研为主，AI 30–60 min/天"},
+    {start:19,   len:2,    label:"深度学习进阶 + 比赛", kind:"dl",
+     tip:"2028.5–6：ResNet/EfficientNet → YOLO 检测 → U-Net 分割 → 打一个 Kaggle/天池入门赛并复盘"},
+    {start:21,   len:2,    label:"论文精读 + 复试收口", kind:"proj",
+     tip:"2028.7–8：精读 3 篇（Attention / LoRA / RAG 综述）→ 20 个复试高频问答 → 简历与讲解定稿"},
+    {start:23,   len:4,    label:"维护（考研冲刺）", kind:"pause",
+     tip:"2028.9–12：AI 转维护，每周 2 h 只保手感，时间交还政治背诵 / 数学套卷 / 408 冲刺"}
+  ]},
+  {name:"考研·英语", track:"en", segs:[
+    {start:0,  len:10, label:"英一 · 单词 + 长难句"},
+    {start:10, len:12, label:"真题阅读 + 作文"},
+    {start:22, len:5,  label:"套卷冲刺"},
+  ]},
+  /* 考研·数学 —— ⭐ 2026-10-19 用户「取消跟课，在课上学张宇」+「第一次学做基础篇」重排：
+     概率：W1–W3 课上+自习自学张宇概率 6 讲（20.3 h，11-08 前看完）
+     高数/线代：11-09 起跑；讲次边界 bug 修复后 高数 88 讲（02-08 收口）、线代 27 条（02-09 ~ 03-07）、统一刷题 03-08 起
+     基础轮做题 = 1000 题基础篇（提高篇只在 2027.9 起的强化 36 讲做）；复盘第 2 轮 = 基础篇二刷 */
+  {name:"考研·数学", track:"math", segs:[
+    {start:0,   len:1,    label:"概率6讲（张宇）",       tip:"2026.10.19–11.08（W1–W3）：取消跟课 → 课上+自习自学张宇概率 6 讲（20.3 h 视频，1.5×）+ 1000 题基础篇概率部分；11-05 起做题周"},
+    {start:1,   len:5.5,  label:"高数+线代（基础30讲）", tip:"2026.11.09 起跑：高数 88 讲（99.0 h）/ 线代 22 讲（29.2 h），每课视频 1.5× + 纸上刷 1000 题基础篇（课后题讲解视频不跟）；12-01~01-24 缓冲改 二/四/六 高数 60 + 一/三/五/日 概率复习 60；高数 02-08、线代 03-07 收口（高数→线代串行，不再并行）"},
+    {start:6.5, len:2.5,  label:"数学刷题期（三阶段）",    tip:"2027-04-11 ~ 06-22：660 客观题（04-11~05-08）→ 数一真题 2010–2019（05-09~06-05）→ 张宇 8 套 + 收尾（06-06~06-22）；03-14~04-10 的 1000 题二刷接在「高数+线代」段尾"},
+    {start:9,   len:2,    label:"基础篇扫尾+30讲二刷",   tip:"2027.7–8：1000 题基础篇错题二刷 +《基础30讲》二刷（只刷第一轮错的）；提高篇不动，留给强化36讲"},
+    {start:11,  len:5,    label:"强化36讲+提高篇",       tip:"2027.9–2028.1：高数 18 + 线代 9 + 概率 9 强化，配 1000 题提高篇（提高篇只在这里做）。竞赛 2027.7 停掉，腾出的 1–2h/天正好交给强化"},
+    {start:16,  len:5,    label:"真题+闭关",             tip:"2028.2–6（5 个月）：近 15 年真题按套计时 +《闭关修炼》；真题期从 2 个月拉到 5 个月"},
+    {start:21,  len:6,    label:"8套+4套",               tip:"2028.7–12（6 个月）：张宇 8 套卷 + 4 套卷 + 错题回顾 + 考前冲刺"},
+  ]},
+  {name:"考研·408", track:"cs408", segs:[
+    /* ⭐ 2026-10-19【408 第三次重排】按真实课时（124 h 王道视频 @1.5× + 课后题 0.8× 观看时长）重切周：
+       数据结构不保留到 W10（用户），四门一轮 + 真题 15 年全部收进 36 周（474 h 周容量）。
+       周次 → 月份：W9→2.25 / W17→4.25 / W22→5.5 / W29→7.25 / W35→8.75 / W36→9 */
+    {start:0,    len:1.0, label:"数据结构（王道 4 周 + 复习 5 周）", tip:"2026.10.19–12.20（W1–W9）：王道第 3~8 章 → 期末复习 3 周 → 二轮+错题收口 2 周。⚠ 期末考可能排到 1 月——用户明确不保留到 W10，W10 首条有回切提示。"},
+    {start:1.0,  len:2.13, label:"组成原理（队列 3 周 + 期末窗口 4 周）", tip:"2026.11.13–2027.01.17：11-14~11-30 队列走完 1.1–3.5（含 Cache 3.4、虚存 3.5）；12-21~01-17 期末窗口手写 4.1–7.3 + 收口。已消灭 1.2–3.5 重复教学。"},
+    {start:3.13,  len:1.21, label:"操作系统（王道 4 周）", tip:"2027.01.25–02.23（W15–W19）：进程 / 内存 / 文件+I/O，队列按真实时长排。比原计划提前 3 周开始。"},
+    {start:4.34,  len:1.25,  label:"计算机网络（王道 5 周）", tip:"2027.02.24–04.02（W19–W24）：体系结构→链路层→网络层→传输层→应用层。已砍低频 4 单元（约 3 h），以太网/VLAN/无线/HTTP 全留。"},
+    {start:5.59, len:3.16,  label:"强化二刷 + 专题突破", tip:"2027.05.10–06.20（W30–W35）：四门各一周错题二刷（只做一轮 + 强化段的标星题）→ 两周专题突破（虚拟内存三级联动 / 流水线时空图 / PV 经典模型 / 子网划分与 TCP 计算）。真题整卷不在这里，已移到 2028.04 起。"},
+    {start:8.75, len:0.25, label:"收口：框架 + 全真一套", tip:"2027.06.21–06.27（W36）：四门框架默画 + 薄弱清单定稿 + 408 全真一套（180 min）+ 一轮错题总清点 + 交接 27-28 面板。"},
+    /* 2027 暑假（7–8 月）：408 停一轮，时间给算法 ICPC/AI 项目 + 数学基础篇扫尾；2027.9 起二轮 */
+    {start:9,   len:2,   label:"暑假：408 维护 3h/周", tip:"2027.7–8：不推新进度，但每周 3h 防遗忘——真题错题本里标 ★ 的题重做（1.5h）+ 组原/OS 计算题公式默写（1.5h），9 周 ≈ 27h。暑假主战场是算法 ICPC 与 AI 项目；英语 1h/天、408 维护 3h/周保底。"},
+    {start:11,  len:7,   label:"二轮四本 + 分类真题", tip:"2027.09–2028.03（27-28 面板 W10–W39）：数据结构 → 组成原理 → 操作系统 → 网络，每门约 7 周：难点重讲 + 课后错题 + 王道《408 真题》按科目分类部分补漏 + 高频考点清单。"},
+    {start:18,  len:9,   label:"真题整卷 + 二刷 + 模拟 + 冲刺", tip:"2028.04–12：真题整卷 15 年首刷（2028.04–06，3 套/周，从 27-28 面板末尾接上）→ 二刷只做错题 → 10 月后模拟卷 → 考前两周只看高频清单。"}
+  ]},
+  {name:"考研·政治", track:"pol", segs:[
+    {start:21, len:2,  label:"徐涛强化班"},
+    {start:23, len:2,  label:"刷选择题"},
+    {start:25, len:2,  label:"背诵笔记 + 8套卷"},
+  ]},
+];
+
+/* ================================================================
+   卡片
+   track: algo / ai / kaoyan / common
+   ================================================================ */
+const CARDS = [
+/* ================= 通用 ================= */
+{track:"common", when:"全程贯穿", title:"最低保底线（状态再差也不许破）", deliv:"连续性 > 强度",
+ tasks:["英语 30 分钟","数学 30 分钟","每周五 git 提交一次","三条加起来约 1 小时——做完就算「今天没断」"],
+ quiz:["我这周有没有断过一天？"]},
+
+{track:"common", when:"每 4 周一次", title:"检查点：三个问题 + 一次调整", deliv:"落后要立刻发现，别等 26 个月",
+ tasks:["这 4 周我交付出什么能跑的东西了？（说不出来 = 有问题）","我能不看资料讲清学到了什么吗？","两条线（算法 / AI）各自的进度对得上计划吗？落后多少？","落后超过 2 周 → 立刻砍一个项目或延后一个阶段，别硬扛","**W32（2027-05-24）起面板每屏都会亮红字「细排只剩 N 周」——那一天必须开始补计划**：先把 2027 暑假 8 周填进 WEEKS，再补 2027 秋冬"],
+ quiz:["我这个月最大的产出是什么？"]},
+
+{track:"common", when:"每个假期", title:"假期拉满（最大的时间增量）", deliv:"2027 寒假 + 暑假 ≈ 660 小时",
+  tasks:["2027 寒假（1–2 月，40 天 × 6h ≈ 240h）：算法冲刺 + 数学基础 + 408 组成原理","2027 暑假（7–8 月，60 天 × 7h ≈ 420h）：手写 GPT + 项目③④ + 数学 1000 题基础篇扫尾 + **英语 1h/天（≈60h：红宝书二轮 + 真题二轮起步，接英语②）** + **408 维护 3h/周（≈27h，防遗忘）**","每个假期开始前先写一张「这个假期交付什么」的清单","2028 的假期留给考研冲刺，不算进来"],
+ quiz:["上个假期我实际交付了什么？"]},
+
+{track:"common", when:"每天", title:"每日时间分配（平时 6.1–9.0h · 周末 6.9–8.6h · 期末 4.0–5.7h · 寒假 6.5–8.3h · 弹性日 3h）", deliv:"一张表知道今天各科花多久",
+ kaoyan:"英一+数一已锁定 → 英语是硬投入，睡眠一秒钟都不许动。期末降载是保命，不是偷懒",
+ tasks:["**周日 = 补课日**：周日不做算法块（算法新题全在周一~周五，周日那 2 h 只是全模板默写，降级成 10 min「只默写卡住的 2 个」）；先清「本周欠账 N 条」（面板实时算：周一~周六漏勾的条目），再收口复盘。没欠账就提前结束，欠了 20 条以上改按科目清。",
+  "每周总投入 **48.5h**（实测：周一 6.7h · 周二 8.3h · 周三 6.5h · 周四 7.3h · 周五 7.2h · 周六 8.0h · 周日 5.6h）。配比：408 9.1h · 算法 9.9h · 英语 10.8h · 数学 9.8h · AI 4.9h（+ 复盘 0.2h）｜⭐ 2026-10-24 冲国赛后重排：04-12~06-06 的 408「课上转自学」3h 块压到 1.5h（−36h）→ 数学**工作日** +40 min/天（周末不加，否则周六撞上 2.5h 模拟赛顶到 9.2h）；06-07~06-27 算法留 60 min 保 ICPC 手感",
+         "工作日：英语 100 + 408 40~150（按当天单元真实时长）+ 算法 120 + 数学 60 + AI 50 ≈ 6.2~7.8h",
+         "周末：英语 100 + 408 90 + 算法 150 + 数学 100 + AI 70 = 8.5h（周六）；周日同表但**无 AI 块** → 7.3h",
+          "数学按内容量分科（实测 高数 100.8h : 线代 30.4h : 概率 20.3h，1.5 倍速看课 + 纸上刷 1000 题基础篇）：10.19–11.08 张宇概率 6 讲（周二 180 含课上 3h 自学，取消跟课）→ 11.09 起 高数 一/三/五/六 + 线代 二/四/日（期末缓冲 12.01–01.24 改成 二/四/六 高数 60 + 一/三/五/日 概率复习 60）。⭐ 2027 起完全串行：高数 88 讲 02-08 学完 → 线代 27 条 03-07 学完 → 03-08 起统一刷题（1000 题二刷 → 660 → 数一真题 → 张宇 8 套）",
+         "英语按星期分工：工作日 = 听力 30 + 单词 30 + 阅读 20 + 六级专项 20；周末 = 单词 30 + 长难句 50 + 六级专项 20（周末不排听力与阅读，避免过载）",
+         "长难句 = 刘晓艳语法长难句，**本地实测 39 讲 / 26.8 h**（每讲 12.9–63.3 min）。周末每天 1 讲，10-24 起、期末暂停，2027-05-01 讲完；工作日只做「抄句 → 划成分 → 翻译」",
+         "六级（2027-06）：⭐ 2027-05-08（W30）起才上六级专项（六级听力 + 5500 词表 + 翻译/写作），之前一律走英一（翻译专项 + 阅读）；阅读直接用英一真题，难度 ≥ 六级",
+         "期末缓冲（01-04–01-24）：工作日 **4.0–4.5h** / 周末 **5.0–5.2h**（周 27.2h）。优先保「英语 60 + 408 期末复习 60 + 数学 60 + 算法 60 + AI 30」",
+   "**每月第 4 个周日不再是弹性日（2026-10-19 取消）**：原来只有 3h（单词 30 + 补差 120 + 复盘 30），" +
+   "反而把整周节奏打断；现在这 9 个周日按正常学习日排（408 + 数学 + 算法），周总量因此从 56h 降到 52.5h",
+          "寒假（01-25–02-28）：408 = **7.6h/周**（按真实时长排）；数学 110 min 打底 + 周一/三/五（高数日）140 min，隔天加时；当周总量 **54.0h**（⭐ 2027 春节 02-05 除夕 / 02-06 初一 / 02-07 初二 改半休，删算法+AI ≈ 4.3–5.7h/天，所以从 57.9 降到 55.5）"],
+ quiz:["我今天的总投入是多少？有没有哪项超时？","今天是平时、期末缓冲期，还是周二（3h 课上自学）？","今天该学概率、高数还是线代？（高数独占（11-09~02-08）→ 线代独占（02-09~03-07）→ 统一刷题）"]},
+
+/* ================= 算法竞赛线：36 周（与「今日面板」W1–W36 完全一致）
+   ⭐ 2026-10-18【C 方案】全面重排：目标「省一 + 试 ICPC」，前期提速，算法加时（其他四线不动）
+   主线：基础课①②③(W1–W5) → 基础课④数学+⑥贪心(W6–W14，含期末缓冲) →
+         提高课第一章 DP(W15–W18) → 第二章 搜索(W19–W20) → 第三章图论基础(W21–W22) →
+         省赛冲刺(W23–W25) → 提高课第四~六章(W26–W30) → 第三章图论进阶(W31) →
+         进阶课网络流(W32–W33) → 进阶课数据结构(W34–W35) → 收尾+ICPC 组队(W36)
+   副线：W15–W30 LeetCode 面试线（服务复试机试）；W31 起换「洛谷/CF 刷题」（转 ICPC）
+   算法块：工作日 120 min / 周末 150 min / 期末缓冲 60 min → 全程 457.5 h（原 343.5 h）
+   ⚠️ 省赛：推算 W25 ≈ 2027-04-10（2026 年第十七届实测 04-11~04-12；2027 官方未公布）
+   ⚠️ 六级：推算 W35 ≈ 2027-06-19（六月场固定在 6 月第 2/3 个周六）
+   题号：W1–W30 用 AcWing；W32–W35 进阶课用洛谷模板题号（AcWing 进阶课题号无法核实，不编造）
+   ⚠️ 面板侧唯一真源是 ALGO_OVERRIDE_RAW / SIDE_PLAN，不是 WEEKS[].algo ================= */
+
+/* ===== 算法线（2026-10-18【C 方案】全面重排：省一 + 试 ICPC，前期提速，算法加时）=====
+   课程体量（官网核实）：基础课 45h/7 块 · 提高课 104h/6 章 · 进阶课 86h/7 章 = 235h 视频
+   算法块：工作日 120 min / 周末 150 min / 期末缓冲 60 min → 全程 457.5 h（原 343.5 h）
+   ⚠️ 进阶课题号用洛谷模板（P3376/P3381/P3369/P3391/P3384/P3810/P3806/P3808/P4782/P3812），
+      因为 AcWing 进阶课打卡题号无法核实——宁可用公认模板题，不编造题号。 */
+
+{track:"algo", when:"W1–W2 · 2026.10", title:"基础课 第一讲 基础算法（排序 / 二分 / 高精度 / 前缀和 / 双指针 / 位运算 / 离散化 / 区间合并）", deliv:"AcWing 785–803 全部 AC；9 个模板不看笔记能写出",
+ kaoyan:"二分边界是最容易翻车的地方——连写 5 次都对才算会",
+ tasks:["【基础课·第一讲】排序/二分 785–790（快排 / 第k个数 / 归并 / 逆序对 / 数的范围 / 三次方根）", "【基础课·第一讲】高精度 791–794（加减乘除）", "【基础课·第一讲】前缀和 795/796 + 差分 797/798", "【基础课·第一讲】双指针 799/800/2816 + 位运算 801 + 离散化 802 + 区间合并 803", "【蓝书 0x01/0x03/0x04/0x05】通读 + 习题各 5 道"],
+ quiz:["整数二分的 mid 该不该 +1，是由什么决定的？", "归并排序为什么能顺带数出逆序对？", "离散化的本质是把什么映射成什么？"]},
+
+{track:"algo", when:"W3 · 2026.11", title:"基础课 第二讲 数据结构（链表 / 栈 / 队列 / KMP / Trie / 并查集 / 堆 / 哈希）", deliv:"AcWing 826–841 全部 AC；九件套模板默写通过",
+ kaoyan:"这一讲从 2 周压成 1 周（前期提速），每天 3–5 题，跟不上的题标记后放周末补",
+ tasks:["【基础课·第二讲】链表/栈/队列 826/827/828/3302", "【基础课·第二讲】单调栈/单调队列 829/830/154", "【基础课·第二讲】KMP/Trie 831/835/143", "【基础课·第二讲】并查集/堆 836/837/240/838/839", "【基础课·第二讲】哈希表 840/841", "【蓝书 0x11/0x12/0x14/0x15/0x16/0x17】通读 + 习题 6 道"],
+ quiz:["单调栈为什么能 O(n) 求出每个数左边第一个比它小的？", "并查集路径压缩后，find 的均摊复杂度是多少？", "字符串哈希为什么可以 O(1) 判断子串相等？"]},
+
+{track:"algo", when:"W4–W5 · 2026.11", title:"基础课 第三讲 搜索与图论（DFS/BFS/拓扑/最短路/MST/二分图）", deliv:"AcWing 842–861 全部 AC；图论 10 个模板全部默写",
+ kaoyan:"这一讲是省赛的地基——最短路四件套的适用条件必须张口就来",
+ tasks:["【基础课·第三讲】DFS 842/843 + BFS 844/845/846", "【基础课·第三讲】树图遍历/拓扑 847/848", "【基础课·第三讲】Dijkstra/Bellman 849/850/853", "【基础课·第三讲】SPFA/Floyd 851/852/854", "【基础课·第三讲】MST 858/859 + 二分图 860/861", "【基础课 收尾】25 个模板整理成一页，随机抽 8 个限时默写"],
+ quiz:["Dijkstra 为什么不能处理负权边？", "SPFA 判负环靠什么？为什么是 cnt ≥ n？", "Prim 和 Kruskal 分别在什么图上更优？", "染色法判二分图的依据是什么定理？"]},
+
+{track:"algo", when:"W6 · 2026.11", title:"基础课 第四讲 数学知识（上半：质数 / 约数 / 欧拉函数 / 快速幂）", deliv:"AcWing 866–876 全部 AC；线性筛与欧拉函数公式能自己推",
+ kaoyan:"数论是蓝桥杯的高频考点，模板短但边界多，每个都手写 3 遍",
+ tasks:["【基础课·第四讲】质数 866/867/868（试除 / 分解质因数 / 线性筛）", "【基础课·第四讲】约数 869/870/871/872", "【基础课·第四讲】欧拉函数 873/874", "【基础课·第四讲】快速幂 875/876（含逆元）", "【基础课·第四讲】阶段自测：模板默写不看笔记", "【蓝书 0x31/0x32/0x33】通读 + 习题 5 道"],
+ quiz:["线性筛为什么每个合数只被筛掉一次？", "欧拉函数 φ(n) 的公式怎么推出来的？", "费马小定理和逆元的关系是什么？"]},
+
+{track:"algo", when:"W7–W9 · 2026.11–12（期末缓冲）", title:"基础课 第四讲 下半（扩欧 / CRT / 高斯消元 / 组合数 / 卡特兰 / 容斥 / 博弈论）", deliv:"AcWing 877–894 全部 AC；组合数四种求法的适用数据范围能说出来",
+ kaoyan:"缓冲期算法 60 min/天，期末仍是主战场——这一块只求「看懂 + 模板会写」，不追数量",
+ tasks:["【基础课·第四讲】扩展欧几里得 877/878 + 中国剩余定理 204", "【基础课·第四讲】高斯消元 883/884", "【基础课·第四讲】组合数 885/886/887/888（递推 / 逆元 / Lucas / 高精度）", "【基础课·第四讲】卡特兰 889 + 容斥 890", "【基础课·第四讲】博弈论 891/892/893/894（Nim / 台阶 / SG / 拆分）"],
+ quiz:["组合数 C(n,m) 四种求法分别适合多大的 n？", "SG 函数为什么能判定任意公平组合博弈？", "高斯消元什么时候无解、什么时候无穷多解？"]},
+
+{track:"algo", when:"W10–W11 · 2026.12（期末缓冲）", title:"基础课 第六讲 贪心（区间 / Huffman / 排序不等式 / 绝对值 / 推公式）", deliv:"AcWing 905–908 / 148 / 913 / 104 / 125 全部 AC；每题能写一句「为什么这样贪」",
+ kaoyan:"贪心不难在写，难在证明——交换论证和邻项交换这两个套路必须会",
+ tasks:["【基础课·第六讲】区间四件套 905/908/906/907（选点 / 不相交 / 分组 / 覆盖）", "【基础课·第六讲】Huffman 148 合并果子", "【基础课·第六讲】排序不等式 913 + 绝对值不等式 104", "【基础课·第六讲】推公式 125 耍杂技的牛", "【蓝书 0x07 贪心】通读 + 二刷"],
+ quiz:["区间选点为什么按右端点排序，而不是左端点？", "合并果子为什么用小根堆而不是大根堆？", "邻项交换法的证明步骤是什么？"]},
+
+{track:"algo", when:"W12–W14 · 2027.1（期末缓冲收尾）", title:"数论 + 贪心 巩固 + 期末保手感", deliv:"基础课 ①②③④⑥ 全部过完一遍；错题本清零",
+ kaoyan:"最后两周只做熟题，不碰新内容——期末 GPA 比算法进度重要",
+ tasks:["【巩固】数论易错点：试除法边界 / 筛法越界 / 逆元不存在", "【巩固】贪心易错点：排序键写错 / 相等元素 / 溢出", "【巩固】错题挑 5 道重做（不看题解）", "【巩固】基础课 ④⑥ 模板总默写", "【保手感】每天 1 道熟题，限时写"],
+ quiz:["基础课 25 个模板里，现在还有几个要翻笔记？"]},
+
+{track:"algo", when:"W15–W18 · 2027.1–2（寒假）", title:"提高课 第一章 动态规划（10 个模型）", deliv:"DP 10 个模型全部能独立建模；背包 / 线性 / 区间 / 树形 / 状压各能手推一遍",
+ kaoyan:"DP 是省赛拉开差距的地方，寒假 4 周每天 2–2.5h，是全周期投入最大的一段",
+ tasks:["【提高课·第一章】数字三角形 1015/1018 + 最长上升子序列", "【提高课·第一章】背包模型 423/1024（含单调队列优化）", "【提高课·第一章】状态机 1049/1055 + 状态压缩 + 区间 DP", "【提高课·第一章】树形 DP 1072/1073 + 数位 DP", "【提高课·第一章】斜率优化 / 四边形不等式（了解即可）", "【蓝书 0x51–0x59 DP】通读 + 章节习题"],
+ quiz:["0/1 背包为什么一维要倒序枚举体积？", "状态压缩 DP 的状态数怎么估？", "树形 DP 的「先子树后自己」为什么是后序遍历？"]},
+
+{track:"algo", when:"W19–W20 · 2027.2–3", title:"提高课 第二章 搜索（FloodFill / 剪枝 / 迭代加深 / A* / IDA*）", deliv:"搜索 13 个小节全部过完；剪枝五个方向各能举一个例子",
+ kaoyan:"原计划只给 1 周（15h），而这一章视频本身就接近 15h——重排后扩到 2 周",
+ tasks:["【提高课·第二章】FloodFill 1097/1098/1106/1076", "【提高课·第二章】最短路模型 1100/173 + 双端队列 BFS 175", "【提高课·第二章】DFS 剪枝 165/166/167/168", "【提高课·第二章】迭代加深 / 双向 DFS 170/171", "【提高课·第二章】A* 178/179 + IDA* 180/181 + 双向广搜 190", "【蓝书 0x23/0x24/0x25/0x26】通读 + 习题 3 道"],
+ quiz:["A* 的估价函数必须满足什么性质？", "IDA* 相比 A* 省在哪？", "剪枝的五个方向分别是什么？"]},
+
+{track:"algo", when:"W21–W22 · 2027.3", title:"提高课 第三章 图论（基础段：最短路 / MST / 负环 / 差分约束）", deliv:"建图能力过关——同一道题能换 3 种建图方式",
+ kaoyan:"省赛只考到这一段；LCA / 强连通 / 二分图进阶留到省赛后（W31）",
+ tasks:["【提高课·第三章】单源最短路 1129/1128/1127/1135/340/342", "【提高课·第三章】最短路综合 341/1137/1134 + Floyd 383/1125", "【提高课·第三章】Floyd 变体 343/344", "【提高课·第三章】MST 1140/1141/1142/1143/1146/346", "【提高课·第三章】次小生成树 1148 + 负环 904/361", "【提高课·第三章】差分约束 1169/362/1170"],
+ quiz:["差分约束什么时候用最长路、什么时候用最短路？", "次小生成树怎么在 MST 上加一条边求出来？", "负环检测的 cnt 数组含义是什么？"]},
+
+{track:"algo", when:"W23–W25 · 2027.3–4", title:"⚠️ 蓝桥杯冲刺 → 省赛（04-10）", deliv:"省赛真题 4 套以上限时完成；全模板默写 3 遍",
+ kaoyan:"这是全年的第一个硬锚点。冲刺期只做真题和模板，不学新专题",
+ tasks:["【冲刺】省赛真题严格计时 4h，做完立刻复盘", "【冲刺】按套卷统计最弱 2 个专题，各刷 20 道", "【冲刺】全模板默写（限时，不看笔记）", "【冲刺】按考试流程模拟：时间 / 环境 / 提交", "【考前】写下「比赛流程卡」：开局做什么、几分钟看一次时间"],
+ quiz:["省赛 4 小时 10 题，你的做题顺序策略是什么？", "遇到不会的题，什么时候该果断跳过？"]},
+
+{track:"algo", when:"W26–W27 · 2027.4", title:"提高课 第四章 高级数据结构（树状数组 / 线段树 / 可持久化 / Treap / AC自动机）", deliv:"树状数组与线段树模板 20 min 内能写出来",
+ kaoyan:"省赛用不上，这是为 ICPC 和复试机试铺路——重点是「会用」不是「会推」",
+ tasks:["【提高课·第四章】并查集扩展 1250/2128", "【提高课·第四章】树状数组 + 线段树 1275", "【提高课·第四章】可持久化数据结构", "【提高课·第四章】平衡树 Treap", "【提高课·第四章】AC 自动机", "【蓝书 0x41–0x46】通读 + 习题 3 道"],
+ quiz:["树状数组能维护什么运算？为什么只能是可减的？", "线段树的懒标记什么时候下传？", "AC 自动机的 fail 指针本质是什么？"]},
+
+{track:"algo", when:"W28–W29 · 2027.4–5", title:"提高课 第五章 数学知识（筛法 / 快速幂 / 矩阵 / 组合 / 高斯 / 容斥 / 概率 / 博弈）", deliv:"矩阵快速幂与组合计数能独立建模",
+ kaoyan:"提高课数学比基础课深一层，重点在「建模」——看到递推要能想到矩阵",
+ tasks:["【提高课·第五章】筛质数 / 分解质因数 / 快速幂 / 约数个数", "【提高课·第五章】欧拉函数 / 同余", "【提高课·第五章】矩阵乘法（矩阵快速幂加速递推）", "【提高课·第五章】组合计数 / 高斯消元", "【提高课·第五章】容斥 / 概率与期望", "【提高课·第五章】博弈论进阶"],
+ quiz:["矩阵快速幂怎么把 O(n) 递推降到 O(log n)？", "概率期望题的状态设计原则是什么？"]},
+
+{track:"algo", when:"W30 · 2027.5", title:"提高课 第六章 基础算法（位运算 / 递归 / 前缀和差分 / 二分 / 排序 / RMQ）", deliv:"这一章是「基础课的加强版」，要求速度而不是新知识",
+ kaoyan:"内容都学过，目标是「提速度」——每题限时，比基础课阶段快 30%",
+ tasks:["【提高课·第六章】位运算 / 递归 / 前缀和差分", "【提高课·第六章】二分（含二分答案） / 排序", "【提高课·第六章】RMQ（ST 表）", "【提高课·第六章】限时训练：每题比基础课阶段快 30%"],
+ quiz:["ST 表为什么能 O(1) 查询区间最值？", "二分答案的判定函数必须满足什么性质？"]},
+
+{track:"algo", when:"W31 · 2027.5", title:"提高课 第三章 图论（进阶段：LCA / 强连通 / 二分图进阶 / 欧拉路）", deliv:"LCA 与强连通缩点能独立写出来",
+ kaoyan:"这一段省赛不考，是 ICPC 的地基——Tarjan 必须能手推",
+ tasks:["【提高课·第三章】LCA 1172/1171/352（倍增 + Tarjan）", "【提高课·第三章】强连通 1174/367/1175（Tarjan 缩点）", "【提高课·第三章】二分图进阶 368/257/372", "【提高课·第三章】二分图匹配 376/378", "【提高课·第三章】欧拉路 1123/1184/1185 + 拓扑 1192/164"],
+ quiz:["Tarjan 求强连通时 dfn 和 low 各表示什么？", "LCA 倍增法为什么要先跳到同一深度？"]},
+
+{track:"algo", when:"W32–W33 · 2027.5（进阶课）", title:"进阶课 第一章 网络流（最大流 / 最小割 / 费用流 / 上下界 / 2-SAT）", deliv:"Dinic 与费用流模板 40 min 内默写；建图手册一页",
+ kaoyan:"ICPC 区域赛的核心考点。省赛后转 ICPC 导向，从这一章开始",
+ tasks:["【进阶课·网络流】最大流：Dinic 模板（洛谷 P3376）+ 当前弧优化", "【进阶课·网络流】最小流：最大流最小割定理 + 最大权闭合子图", "【进阶课·网络流】费用流：洛谷 P3381 + 势能 Dijkstra（Primal-Dual）", "【进阶课·网络流】上下界可行流（无源汇 / 有源汇）", "【进阶课·网络流】2-SAT：洛谷 P4782", "【进阶课·网络流】建图手册：拆点 / 二分图 / 闭合子图 / 上下界 / 网格图"],
+ quiz:["最大流等于最小割，这个定理怎么用？", "费用流为什么能用势能 Dijkstra 处理负权？", "2-SAT 的对称性建图是什么意思？"]},
+
+{track:"algo", when:"W34–W35 · 2027.6（进阶课）", title:"进阶课 第二章 数据结构（Splay / 树链剖分 / 莫队 / CDQ / 点分治 / AC自动机 / 线性基）", deliv:"Splay 与树剖模板 30 min 内写出",
+ kaoyan:"这一批模板决定 ICPC 能走多远——写不出来的列清单，暑假补",
+ tasks:["【进阶课·数据结构】Splay：洛谷 P3369 普通平衡树 + P3391 文艺平衡树", "【进阶课·数据结构】树链剖分：洛谷 P3384（路径修改 / 查询）", "【进阶课·数据结构】莫队：洛谷 P1494（普通 / 带修 / 回滚）", "【进阶课·数据结构】CDQ 分治：洛谷 P3810 三维偏序", "【进阶课·数据结构】点分治：洛谷 P3806", "【进阶课·数据结构】AC自动机 P3808 + 线性基 P3812"],
+ quiz:["Splay 的旋转和伸展分别解决什么问题？", "树链剖分为什么能把路径操作降到 O(log²n)？", "莫队的复杂度为什么是 O(n√n)？"]},
+
+{track:"algo", when:"W36 · 2027.6", title:"算法线收尾 + ICPC 组队与模拟赛", deliv:"模板分专题归档；ICPC 队伍成型；2027 秋季计划定稿",
+ kaoyan:"ICPC 必须三人组队，区域赛在 9–12 月——那时你在考研冲刺，这一场是「体验」，不是主线",
+ tasks:["【收尾】36 周模板清单按专题整理（基础 / DP / 搜索 / 图论 / 数学 / 数据结构 / 网络流）", "【ICPC】组队：找 2 个队友，确定分工（读题 / 主写 / 调试）", "【ICPC】打一场 5 小时模拟赛（3 人 / 1 台机 / 纸质题面 / 无网络）", "【ICPC】模拟赛复盘：时间分配与分工怎么改", "【ICPC】定 2027 秋季计划：报名时间 / 每周训练量 / 待补专题", "【收尾】写「算法线 36 周总结」"],
+ quiz:["36 周下来，哪些模板能一遍写对、哪些还要翻笔记？", "ICPC 和你 2027 秋季的考研强化，时间怎么分？"]},
+
+{track:"ai", when:"W1 · 2026.10（10-19 起）", title:"Python 复习（只 1 周）：语法 → 函数 → 文件/异常 → 环境", deliv:"能不看笔记写出「读文件 + 异常处理」的小工具",
+ kaoyan:"Python 只复习 1 周（原 4 周压缩），省下的时间直接进 NumPy 和项目①",
+ tasks:["语法速览：变量/类型/IO + if/for/while，写 3 个小程序（温度换算、BMI、九九乘法表）",
+  "函数 + 列表字典：闰年、阶乘、最大公约数、字典存成绩算平均/最高",
+  "文件读写 + 异常：with open(encoding='utf-8') 读中文 txt；try/except 捕获 FileNotFoundError / ValueError",
+  "json 四函数 dumps/loads/dump/load + venv/pip freeze/git init 提交",
+  "综合小工具：带容错的通用读文件函数 + week1/ 目录 + README 三步启动"],
+ quiz:["with open 不加 encoding 会出什么问题？","try/except 该捕获哪几种异常？"]},
+
+{track:"ai", when:"W2 · 2026.10", title:"NumPy：ndarray / 切片 / 广播 / 矩阵乘法", deliv:"能用矩阵化写法替掉所有 for 循环",
+ tasks:["array/zeros/ones/arange/linspace + shape/reshape/布尔索引","广播机制：标量 / 行向量 / 列向量分别怎么广播",
+  "dot vs @ vs 逐元素 *，三者区别写清楚","把矩阵乘 / 广播 / axis 三个坑各写一个「反例 + 正确写法」","整理一份 NumPy 小抄（5 个最常用操作 + 各自的坑）"],
+ quiz:["(3,) 和 (3,1) 广播结果差在哪？","axis=0 和 axis=1 分别沿哪个方向算？"]},
+
+{track:"ai", when:"W3 · 2026.11", title:"项目① v1：切段落 + 词频 + 余弦相似度 + Top-3", deliv:"能对着自己的文档提一个问题，返回最相关的 3 段",
+ tasks:["读 data/docs，按空行或长度切段落","统计词频（先 dict，再 Counter）","手写余弦相似度，输入一个问题返回 Top-3","用 10 个问题人工看命中情况"],
+ quiz:["词频为什么会被长文档带偏？","余弦相似度为什么不受长度影响？"]},
+
+{track:"ai", when:"W4 · 2026.11", title:"项目① 评测：矩阵化 + 10 题评测集 + Hit@1/3", deliv:"能说出「这一版比上一版好在哪、好了多少」",
+ tasks:["用 NumPy 重写相似度（去掉 Python 循环）","建 10 题评测集，记录 Hit@1 / Hit@3","对比循环版与矩阵版的耗时"],
+ quiz:["Hit@3 高但 Hit@1 低说明什么？","矩阵化省下的到底是哪部分时间？"]},
+
+{track:"ai", when:"W5 · 2026.11", title:"项目① 发布：目录 / README / 推远端 / 3 分钟讲解", deliv:"别人 clone 下来能照着跑通",
+ tasks:["整理目录 src/data/tests/README","README 写：问题 → 数据 → 方案 → 数字 → 怎么跑","推到 GitHub + 换目录 clone 验证","录一次 3 分钟讲解"],
+ quiz:["README 里最该写的是哪一段？","别人跑不起来的常见原因有哪些？"]},
+
+{track:"ai", when:"W6 · 2026.11", title:"pandas：DataFrame / CSV / 筛选 / groupby", deliv:"能把一份 CSV 读进来、清洗完、按组算出指标",
+ tasks:["DataFrame / Series 创建与查看（head / info / describe）","读 CSV、选列、条件筛选、排序","groupby + agg 做分组统计","处理缺失值（dropna / fillna）"],
+ quiz:["loc 和 iloc 的区别？","groupby 之后为什么常接 agg？"]},
+
+{track:"ai", when:"W7 · 2026.11–12", title:"matplotlib：plot / subplot / 保存图片", deliv:"能画出训练曲线并读图判断过拟合",
+ tasks:["plot / scatter / 标题 / 图例 / 坐标轴","subplot 画网格，保存 PNG","画一条 loss 曲线并标出拐点"],
+ quiz:["怎么从两张曲线看出过拟合？","保存图片为什么要 bbox_inches='tight'？"]},
+
+{track:"ai", when:"W8 · 2026.12（12-07 那一周）", title:"机器学习引子：数据划分 + 损失函数", deliv:"能讲清「训练/验证/测试」和「学习=让损失变小」",
+ kaoyan:"这一周仍在期末缓冲（30 min/天）；完整的机器学习放到 2028.3–4 补",
+ tasks:["训练/验证/测试划分，为什么不能拿测试集调参","K 折交叉验证（sklearn 跑一遍）","MSE 与交叉熵分别用在哪 + 手算一遍 MSE","写下「什么是学习」的一段解释（能讲 2 分钟）"],
+ quiz:["为什么不能拿测试集调参？","MSE 和交叉熵各自的适用场景？"]},
+
+{track:"ai", when:"W9–W11 · 2026.12–2027.1", title:"期末轻量复习（30 min/天）", deliv:"手感不掉，寒假能直接接上 PyTorch",
+ kaoyan:"期末优先，AI 只保留 30 min/天",
+ tasks:["重写 week1 的小程序（不看旧代码）","默写 NumPy 小抄 + 把项目① 相似度改成矩阵化","给项目① 补 3 个 pytest + 跑一遍评测集记基线","读一篇 RAG 入门文章，画一张 AI 学习地图定寒假计划"],
+ quiz:["项目① 现在的 Hit@1 是多少？","寒假第一件事是什么？"]},
+
+{track:"ai", when:"W12–W14 · 2027.1", title:"期末暂停", deliv:"AI 全停，时间给期末",
+ tasks:["AI 不上新内容","有空只跑一遍旧代码保手感"],
+ quiz:[]},
+
+{track:"ai", when:"W15–W18 · 2027.1–2（寒假）", title:"PyTorch 入门 + MNIST 全连接", deliv:"能自己写出训练循环并看懂 loss 曲线",
+ kaoyan:"寒假是 AI 的加时窗口",
+ tasks:["装 PyTorch(cu128) 并验证 GPU 可用","nn.Module 定义模型（forward 写清楚）+ Dataset/DataLoader",
+  "写完整训练循环：前向 → loss → 反向 → 更新 → 验证","跑 MNIST 全连接，记录基线准确率",
+  "正则化组合拳：dropout / weight decay / 早停，各去掉一次看掉多少"],
+ quiz:["zero_grad 忘了写会怎样？","train() 和 eval() 差别在哪？"]},
+
+{track:"ai", when:"W19–W22 · 2027.2–3", title:"CNN 原理 → 图像分类实战 → 工程化 → lr 调度与诊断", deliv:"能独立把一个图像分类任务调出结果",
+ tasks:["卷积 / stride / padding / 输出尺寸公式 / LeNet","换非 MNIST 数据集（FashionMNIST / CIFAR-10）做分类，记基线",
+  "TensorBoard 接进训练循环：看 loss / lr / 权重分布","lr 调度（StepLR / Cosine / ReduceLROnPlateau）+ warmup",
+  "诊断流程：loss 不降的 6 个排查顺序 + 混淆矩阵找最差 2 类"],
+ quiz:["卷积后特征图尺寸怎么算？","loss 不降先查什么？"]},
+
+{track:"ai", when:"W23–W26 · 2027.3–4", title:"RNN/LSTM → Transformer 原理 → 搭 mini Transformer → 预训练/微调", deliv:"能手写 attention 并搭出一个能跑的小 Transformer",
+ tasks:["RNN 原理 + 梯度消失；LSTM 三个门手推","3Blue1Brown Transformer 系列 + 手写 scaled dot-product attention",
+  "搞清 Q/K/V、为什么除以 √d、multi-head、O(n²)","搭 mini Transformer 训练一个小语言模型",
+  "预训练 + 微调概念，搞清「为什么要先预训练」"],
+ quiz:["为什么除以 √d？","KV cache 省的是哪部分计算？"]},
+
+{track:"ai", when:"W27–W30 · 2027.4–5", title:"项目② 图像分类：baseline → 改进 → 迁移学习 → 消融", deliv:"一个有消融实验和错误分析的项目",
+ tasks:["v1：定方向 + 读 3 篇论文摘要 + baseline 跑通记数字","v1 改进：数据增强 / 更深网络 / lr 调度，选一个做对比",
+  "v2 迁移学习：用预训练 ResNet 替换自己搭的 CNN","收尾：消融实验（去掉增强/迁移各掉多少）+ 错误分析 + 作品集一页"],
+ quiz:["迁移学习为什么在小数据集上更好？","消融实验要固定哪些变量？"]},
+
+{track:"ai", when:"W31–W33 · 2027.5–6", title:"文档/作品集一次收口 + 复习 + 面试 20 题", deliv:"两个项目能讲、能跑、数字对得上",
+ tasks:["README 写清：问题 → 数据 → 方案 → 权衡 → 数字（项目①② 各一份）","新建环境按 requirements 重跑两个项目 + 核对所有数字",
+  "复习：损失函数家族 / 优化器 / 评估指标 / 过拟合诊断","写 AI 面试常问 20 题自查表 + 自测 + 补答不上的",
+  "36 周总结 + 定暑假计划（手写 GPT + 项目③）"],
+ quiz:["两个项目各能讲几分钟？","哪一类题你答不上来？"]},
+
+{track:"ai", when:"W34–W36 · 2027.6", title:"项目③ RAG：向量库 → RAG 骨架 → 部署", deliv:"一个能问文档并带出处回答的系统",
+ tasks:["定方向（文档问答）+ 读 3 篇 RAG 论文摘要 + 选向量库（FAISS / Chroma）",
+  "把项目① 的检索换成向量检索，对比命中率与速度","搭 RAG 骨架：chunk → embed → 检索 → 拼 prompt → 生成",
+  "10 题评测集跑 baseline + 改 chunk 策略看数字","FastAPI 包接口（/ask 返回答案 + 出处）+ 3 步启动说明"],
+ quiz:["chunking 切太碎/太大分别出什么问题？","检索没命中时模型会怎样？"]},
+
+{track:"ai", when:"2027.7 – 8（暑假）", title:"手写 GPT + 项目③ 深化", deliv:"约 300 行 GPT，能训练并生成文本",
+ kaoyan:"这是假期的主战场，每天可以投 6–7 小时",
+ tasks:["跟完 Karpathy 的 Let's build GPT，自己敲一遍","实现 tokenizer / embedding / 位置编码",
+  "实现残差、LayerNorm、前馈层","训练并采样生成文本，看着 loss 掉下去",
+  "整理成项目③ + 实验笔记（改了什么 → 数字怎么变）"],
+ quiz:["Pre-LN 和 Post-LN 的差别？","KV cache 省的是哪部分计算？"]},
+
+{track:"ai", when:"2027.9 – 10", title:"检索进阶 + 向量库", deliv:"能区分「没检索到」和「检索到但答错」",
+ kaoyan:"考研：数学强化（2027.9 起）+ 408 二轮",
+ tasks:["用 embedding 模型把文档向量化，灌进向量库","实现完整的「检索 → 拼上下文 → 生成」链路",
+  "加引用：答案必须指出第几个文件、哪一段","加 rerank 或混合检索（BM25 + 向量）","建 20 题评测集，记录每一版命中率"],
+ quiz:["向量检索和关键词检索各自擅长什么？","rerank 加在哪一步？"]},
+
+{track:"ai", when:"2027.11", title:"★ 主力作品：多模态文档 RAG", deliv:"可部署的文档问答系统 + 评测数字",
+ tasks:["处理扫描件 / PDF / 表格（MinerU / PaddleOCR 任选）","答案带原文位置引用（第几页哪个区域）",
+  "能说出 RAG 效果差的 5 个原因和各自改法","FastAPI 包成接口 + Docker 打包","README 写清：问题 / 方案 / 权衡 / 数字"],
+ quiz:["表格里的数字为什么难抽？","你的评测集有区分度吗？"]},
+
+{track:"ai", when:"2027.12", title:"Agent + 部署", deliv:"一个真能替你干活的 Agent",
+ kaoyan:"考研：408 二轮 + 英语真题；政治 2028.7 才起",
+ tasks:["读 ReAct，实现「思考 → 调用 → 观察」循环","给工具加失败重试和兜底",
+  "做一个有用的 Agent（读文档出报告 / 代码库问答）","用 Ollama 或 vLLM 部署，本地能访问","列出它的 3 种失败模式和兜底设计"],
+ quiz:["谁决定调用工具，谁执行工具？","Agent 最常见的失败是什么？"]},
+
+{track:"ai", when:"2028.1", title:"LoRA / QLoRA 微调", deliv:"微调前后对比 + 能判断「该不该微调」",
+ tasks:["造 500–2000 条自己的数据集（清洗、去重）","用 LLaMA-Factory 或 Unsloth 做一次 LoRA 微调",
+  "和「只改 prompt」「上 RAG」做对比","做一次量化（GGUF/GPTQ），记录速度与质量损失","说清这个需求为什么必须/不必微调"],
+ quiz:["LoRA 为什么省显存？","量化的代价体现在哪？"]},
+
+{track:"ai", when:"2028.2", title:"作品集 + 复试话术", deliv:"3 个项目上 GitHub + 能讲 30 分钟",
+ kaoyan:"已定：不写论文、不投期刊、不申大创 —— 复试靠「初试分数 + 省一 + 项目」说话",
+ tasks:["3 个项目整理上 GitHub，README 写清方案/权衡/数字","每个项目录 3 分钟讲解",
+  "准备高频追问：attention 复杂度 / RAG 难点 / LoRA 原理","简历上写出「文档智能 Document AI」定位"],
+ quiz:["老师问「最难的地方」，你怎么答？","哪个数字证明你的方案有效？"]},
+
+{track:"ai", when:"2028.3 – 4", title:"机器学习补全（面试向）", deliv:"能用 sklearn 跑通「数据 → 模型 → 评估 → 调参」，讲清 6 个高频面试题",
+ kaoyan:"考研：数学真题 + 408 真题二刷为主，AI 每天 30–60 min —— 这是复试投资，不是主线",
+ tasks:["线性回归 / 逻辑回归：sklearn 跑通，讲清「损失函数怎么来」","决策树 / 随机森林：能解释「为什么集成比单棵树稳」",
+  "XGBoost / LightGBM：调一遍参数，看特征重要性","K-means 聚类 + PCA 降维：各跑一次，说清适用场景",
+  "评估与调参：混淆矩阵 / ROC-AUC / 网格搜索 + 交叉验证","偏差-方差 + L1/L2 正则化：写成一页能讲的笔记"],
+ quiz:["随机森林为什么不容易过拟合？","AUC 很高但业务效果差，可能是什么原因？"]},
+
+{track:"ai", when:"2028.5 – 6", title:"深度学习进阶 + 一个比赛型项目", deliv:"打一个入门赛，成绩进前 30%，并写出复盘",
+ kaoyan:"考研：数学 8 套卷 + 408 真题二刷；AI 仍控制在 30–60 min/天",
+ tasks:["ResNet / EfficientNet：为什么残差、深度可分离卷积省了什么","YOLO 目标检测：跑通推理 + 自己改一个超参看效果",
+  "U-Net 语义分割：完整训练一次，看 IoU","数据增强与类别不平衡（重采样 / focal loss）",
+  "打一个 Kaggle / 天池入门赛（表格或图像任选），目标前 30%","比赛复盘：哪些改进真有效、哪些是噪声"],
+ quiz:["ResNet 解决的是什么问题？","比赛里最有效的那个改进，为什么有效？"]},
+
+{track:"ai", when:"2028.7 – 8", title:"论文精读 + 复试问答收口", deliv:"能讲 3 篇论文 + 20 个复试高频问题都有答案",
+ kaoyan:"考研：政治启动 + 英语真题套卷 + 数学 8 套卷；AI 降到 30 min/天，重点是「讲得清」而不是「学新的」",
+ tasks:["精读 3 篇：Attention Is All You Need / LoRA / 一篇 RAG 综述","每篇写 5 行：解决什么、怎么做、结果、局限",
+  "整理 20 个复试高频问题 + 答案（ML / DL / RAG / 项目各 5 个）","简历定稿 + 3 个项目各录 3 分钟讲解",
+  "模拟一次 20 分钟复试（自问自答并录音，回听卡壳处）","整理一页纸「项目速览」，随时能给老师看"],
+ quiz:["Attention 的计算复杂度是多少？","你项目里最难的地方在哪，怎么解决的？"]},
+
+{track:"ai", when:"2028.9 – 12", title:"转维护模式", deliv:"每周 2 小时，只保手感",
+ tasks:["每周 2 小时：跑一遍已有项目，确认还能跑通","不开新坑、不追新技术","复试前一周把 3 个项目重新跑一遍 + 讲一遍"],
+ quiz:[]},
+
+/* ================= 考研线 · 英语 ================= */
+{track:"en", when:"2026.10 – 2027.6", title:"英语① 基础：单词 + 长难句 + 四级 + 六级（英一 · 冲 60+）", deliv:"四级过线 + 六级过线 + 单词一轮 + 长难句能拆 + 真题精读 125 篇（一天一篇）+ 翻译 12 套单遍 + 完型 43 套",
+ kaoyan:"上次 399（差 26 分），听力仅 87/248.5 = 35% → 听力提到 130 就 +43 分，直接过线。主攻听力精听",
+ tasks:["✅ 四级已报名（2026-10-20 确认）· 2026-12-12 考试 → 12-05 起打印准考证、确认考场（别到最后一天）","每天 90 分钟（10–11 月冲刺）：单词 30 + 听力精听 30 + 阅读真题 20 + 长难句 10",
+   "四级单词：两轮制——第一轮 10-19 ~ **11-09**（22 天），第二轮 11-10 ~ **12-04**（25 天），12-05 起只滚错词（12-12 考试）",
+   "**阅读精读：一天一篇 60 min**（期末缓冲期两天一篇、每天 30 min），材料按真实真题序列走 英一 1997–2024 + 英二 2010–2011 → 全期 **125 篇**；2025–2027 三年（12 篇）不碰，留作模考",
+   "阅读 60 min 分四步：①限时做题 18（不查词）→ ②逐题定位 12 → ③长难句 3–5 句拆译 18 → ④生词 + 同义替换 + 复述 12" + 
+   "（原来一周 2 篇、每篇横跨 2–3 天，每天 50 min 的槽里只装 15–30 min 的活，一篇声明 150 min、实际 65 min —— 已改成一天一篇）",
+   "六级词汇：**不再单独背**——红宝书 5500 词已覆盖六级；原 20 min 六级词书时间改为 25 min 红宝书 + 阅读/听力",
+   "考研段：27 版红宝书 = 必考词 26 + 基础词 30 = 56 Unit，**纸质背诵、不看视频**；" +
+   "12-14 起每周 2 个 Unit（3.5 天一个），26 周走完 56 个 Unit，不设 13 周期限；" +
+   "六级阶段（01-18~06-11）：单词 25 min 全部给红宝书，不再分给六级词书",
+   "**翻译 12 套单遍**（2010–2021，每套 3 段：第 1–2 / 3–4 / 第 5 句）：01-25 起 15 min，03-04 走完就停，不再循环重做",
+   "**完型 43 套单遍**（英一 1997–2024 + 英二 2010–2024）：翻译走完后接手专项位，15 min：限时 8 → 对答案 4（逻辑衔接词 + 固定搭配）→ 记 3 行",
+   "长难句：刘晓艳语法长难句共 39 讲（本地 mp4 实测 26.8 h）；周末每天 1 讲，10-24 起、期末暂停，2027-05-01 讲完","听力精听四步：先做题 → 对答案 → 逐句听写 → 对原文找原因（生词 / 连读 / 语速）","每周 2–3 套四级真题（听力 + 阅读各一遍）","考前 2 周背写作 + 翻译模板","每周复盘：这周断过几天？"],
+ quiz:["这个月我断过几天？","今天的听力听写做了吗？（泛听不算）","今天这 60 min 的阅读，四步都走完了吗？（只做题不拆句 = 白做）"]},
+
+{track:"en", when:"2027.6（六级）", title:"英语①-补 六级专项（2027-06 考试）", deliv:"六级过线（425+），且不拖累考研英语节奏",
+ kaoyan:"六级与英一材料高度重合（英一难度 ≥ 六级）→ 不是额外任务，是「同一份时间打两个靶」。真正的增量只有：六级听力、5500 词表、翻译与写作",
+ tasks:["时间：2027-06 考试（面板 W34 那一周）。W14 起就转六级材料，不要等到考前才动",
+         "听力（六级占 35%，是最大变量）：W14 起工作日每天 30 min 六级真题听力——听写 → 对原文 → 找原因（生词 / 连读 / 语速）。泛听没用，一分不涨",
+         "词汇：四级 4500 → 六级 5500。单词块换六级核心词，工作日 + 周末每天 30 min",
+         "阅读：直接用英一真题精读（难度 ≥ 六级），不额外刷六级阅读——这就是共用",
+         "翻译 + 写作（六级独有题型）：工作日专项位 15 min 轮换（翻译12套单遍 03-04 走完，之后转完型 43 套），每周各 2–3 次；W33–W34 定稿一套作文模板",
+         "⚠️ 与考研的优先级：考研英语是主线（英一 2028-12），六级是阶段性目标。六级过线后立刻停掉听力，时间还给考研",
+         "⚠️ 6 月是旺季（408 网络收尾 + 期末）→ 六级冲刺不要压过 408，W34 已做减法（见面板）"],
+ quiz:["我六级听力现在能对多少？（裸考分 vs 目标分的差距）","六级过线后，哪些时间要立刻还给考研英语？"]},
+
+{track:"en", when:"2027.7 – 2028.6", title:"英语② 强化：单词二轮 + 真题二轮", deliv:"第一阶段已一天一篇走完 125 篇精读（英一 1997–2024 + 英二 2010–2011，每篇 60 min）；本阶段做英二 2012–2024（52 篇）二轮 + 2025–2027 三年 12 篇当面模考",
+ kaoyan:"2027 暑假（7–8 月）每天 1h：红宝书二轮 30 min + 真题二轮 30 min（9 周 ≈ 60h）；9 月起恢复周内 11.9h 节奏。",
+ tasks:["2025–2027 三年（12 篇）不碰：留到 2028.7 起的真题期当模考（最新几年最像真题）","单词第二轮（比第一轮快一倍）","真题二轮一天 1 篇 45 min：先做 → 对答案 → 只看错题定位 + 生词（第一轮已经逐句拆过，不再拆全文）","把第一轮的生词本和长难句笔记按题型重排成自己的解题清单","总结题型：细节题 / 主旨题 / 推断题 / 态度题各自的解法",
+  "⚠ 新题型（七选五 / 排序 / 小标题，英一 10 分）：每周 1 篇，轮换三种题型，限时 15 min；这是唯一没被阅读覆盖的题型，别漏"],
+ quiz:["我错得最多的题型是哪一类？"]},
+
+{track:"en", when:"2028.7 – 9", title:"英语③ 真题全套 + 作文起步", deliv:"近 10 年真题按套做完",
+ tasks:["按套做近 10 年真题（除作文先跳过）","每周写 1 篇大作文 + 1 篇小作文","背 10 个万能句型，但不要整篇背模板","整理自己的作文素材库（话题 / 观点 / 例子）"],
+ quiz:["作文最怕的是什么？（无话可说 / 语法错 / 跑题）"]},
+
+{track:"en", when:"2028.10 – 12", title:"英语④ 冲刺：作文定稿 + 套卷", deliv:"上考场",
+ tasks:["作文模板定稿，背熟并能默写","每周 1 套完整真题计时（含作文）","翻译 / 完型 / 新题型 三个专项各练 10 套（新题型用 2005–2018 真题里没做过的年份）","考前两周只看自己的生词本和作文模板"],
+ quiz:[]},
+
+/* ================= 考研线 · 数学（张宇） =================
+   ⭐ 2026-10-19 重排后，7 张卡的时间与甘特图轨道严格对应：
+      0–1 概率6讲 · 1–6.5 高数+线代（串行）· 6.5–9 刷题期 · 9–16 基础篇扫尾+30讲二刷
+      · 11–16 强化36讲+提高篇 · 16–21 真题+闭关 · 21–27 8套+4套
+   ⚠️ 勾选状态按「卡序号|类型|条目序号」存，增删卡片会触发指纹校验丢弃旧状态
+     （本次在 408④ 与 串联 之间新增 1 张「真题整卷」卡，属有意变更）。 */
+{track:"math", when:"2026.10 – 2027.1", title:"数学① 张宇概率 6 讲（取消跟课，11-08 前看完）+ 高数/线代提前起跑（11-09 起）", deliv:"概率 6 讲一轮 + 高数线代比原计划早 2.5 个月开工",
+  kaoyan:"数一 = 数二 + 概率统计，内容最多。学校在讲概率，但用户决定取消跟课：课上+自习自学张宇（周二 3h 概率连堂在课上看张宇）。概率视频 20.3 h，三周看完后时间全让给高数",
+  tasks:["10.19–11.08 张宇概率 6 讲：周二 180 min（课上连堂自学）、周末 130 min、工作日 60 min；1.5× 看课 + 纸上刷 1000 题基础篇概率部分",
+         "11.05–11.08 做题周：6 讲看完后清错题（讲解视频不跟，直接刷题）",
+         "11-09 起高数/线代提前起跑（原 2027-01-25）：高数 一/三/五/六，线代 二/四/日",
+         "12-01 ~ 01-24 期末缓冲：二/四/六 高数 60 min，一/三/五/日 概率复习 60 min（R1 已学部分 → R2 错题+学校复习课 → R3 往年题 2 套 → R4 公式冲刺）",
+         "数学一次课的容量：工作日 60 · 周末 130 · 寒假 80 min；一讲要拆 4–12 次课"],
+  quiz:["概率 6 讲看到第几讲了？","11-09 的高数第 1 讲（12 次课）我排进日历了吗？"]},
+
+{track:"math", when:"2026.11 – 2027.6", title:"数学② 张宇《基础30讲》第一轮（数一 · 高数→线代 全程串行）", deliv:"高数 18 讲 + 线代 6 讲各一轮：高数 88 讲 02-08、线代 27 条 03-07 收口，03-08 起统一刷题到 06-22",
+  kaoyan:"实测视频时长：高数 18 讲 100.8 h、线代 6 讲 30.4 h（概率 20.3 h 已在①结束）—— 高数占 2/3 以上，所以高数才是主线。第 1 讲一个讲就要 13.8 h、拆 12 次。2026-10-19 修掉讲次边界 bug（原计划每讲边界都会跳分把钟，高数少排 11.9 h）→ 94 次课排满",
+  tasks:["寒假（01-25 起）每天 110 min：高数 一/三/五/六，线代 二/四/日",
+         "1.5 倍速看课：视频 + 自己推例题 40% + 本讲课后题 60%（张宇每一讲后面都有课后题，必须做）",
+         "高数 11-09 ~ 02-08 学完 18 讲；线代 02-09 ~ 03-07 学完（高数→线代 串行，不再并行）",
+         "03-08 起统一刷题：03-08~04-10 1000 题基础篇第一遍 → 04-11~05-08 错题二刷 + 薄弱章 → 05-09~06-27 基础 30 讲二刷（合书串讲 + 例题重做）"],
+  quiz:["这一讲合上书能不能讲出主线？","第 1 讲 12 次课，我跟到第几次了？"]},
+
+{track:"math", when:"2027.7 – 8", title:"数学③ 1000 题基础篇扫尾 + 30讲二刷", deliv:"基础题不失分；提高篇不动",
+  tasks:["每天 1.5 小时","基础篇扫尾：只刷第一轮错过的题，错题进错题本",
+         "《基础30讲》二刷：只刷第一轮错的章节",
+         "每两周做一次 30 题小测，记录正确率曲线",
+         "⚠ 提高篇不碰——留给 2027.9–2028.1 强化 36 讲"],
+  quiz:["我的正确率曲线在涨吗？","错题本里哪一章最多？"]},
+
+{track:"math", when:"2027.9 – 2028.1", title:"数学④ 张宇《强化36讲》+ 1000题提高篇", deliv:"强化阶段完成",
+  tasks:["每天 2.5 小时","《强化36讲》配套视频 + 例题（高数 18 + 线代 9 + 概率 9）",
+         "《1000题》提高篇（用户口径：提高篇只在学强化课时做），错题必须当天重做","开始练大题书写规范（步骤分）","《闭关修炼》按需选做"],
+  quiz:["强化阶段的重点是什么？（题型 + 速度）"]},
+
+{track:"math", when:"2028.2 – 6", title:"数学⑤ 真题 + 闭关修炼", deliv:"近 15 年真题按套过一遍",
+ tasks:["每天 3–4 小时","《张宇真题大全解》近 15 年，按套计时做",
+        "每套做完：错题分类（计算错 / 思路错 / 不会）","《闭关修炼》集中刷一遍","整理：哪些章节反复出错"],
+ quiz:["我真题稳定在多少分？"]},
+
+{track:"math", when:"2028.7 – 10", title:"数学⑥ 张宇8套卷 + 真题二刷", deliv:"查漏补缺完成",
+ tasks:["《张宇8套卷》按套计时（难度高于真题，别被打击）","真题二刷：只做第一轮错的题",
+        "每天保持 2.5–3 小时做题手感","错题本第三遍过筛"],
+ quiz:["8套卷平均分 vs 真题平均分差多少？"]},
+
+{track:"math", when:"2028.11 – 12", title:"数学⑦ 张宇4套卷 + 错题回顾", deliv:"上考场",
+ tasks:["《张宇4套卷》计时完成","考前两周只做错题本 + 公式默写",
+        "调整答题顺序与时间分配（选择填空控制在 50 分钟内）","考前一晚只看公式，不做新题"],
+ quiz:[]},
+
+/* ================= 考研线 · 408（王道） =================
+   ⭐ 2026-10-19 第三次重排（用户：细致重新规划，不保留数据结构到 W10）：
+     四门一轮 + 真题 15 年全部收进 36 周面板；真题整卷在 W30–W35 一次做完，
+     2027.9 起的 408⑤ 二轮与 2028.4 起的 408⑥ 真题二刷保持不变。 */
+{track:"cs408", when:"2026.10.19 – 2026.11.13（面板 W1–W5）", title:"408① 数据结构（从「栈」开始，跳到第 3 章；5 周）", deliv:"数据结构一轮跟完 + 期末考完",
+ kaoyan:"⭐ 2026-10-19 按 B 站王道官方分P 的真实时长重排：数据结构视频 30.7 h（跳过前两章后实排 133 个单元 / 119 h），块 = 观看（视频/1.5）+ 课后题（观看 × 0.8）",
+  tasks:["每天 1 个单元（视频 40–58 min），条目里直接写清「视频 N min（1.5× ≈ M min）+ 课后题 约 K min」","顺序：**从「栈」开始**（第 1–2 章绪论/复杂度/线性表用户已学过，跳过）→ 栈队列数组 → 串/KMP → 树 → 图 → 查找 → 排序","每章做完王道课后选择题 + 大题","W5 收口：全章错题 + 复杂度表默写"],
+  quiz:["408 的数据结构和蓝桥杯的算法，差别在哪？","红黑树要学到什么程度？"]},
+
+{track:"cs408", when:"2026.11.13 – 2026.11.30（面板 W5–W9 队列；第 4–7 章在期末窗口 12.21–1.17 手写补完）", title:"408② 计算机组成原理（王道按真实时长，含期末缓冲 + 寒假）", deliv:"王道《组成原理》一章不落（含课后题 + 真题选择 20 道）",
+  kaoyan:"视频 34.1 h（1.5× ≈ 22.5 h）+ 课后题 ≈ 18 h = 40.5 h。期末缓冲期不排新内容，寒假加时推进",
+  tasks:["W7–W11 在期末缓冲里低强度：只保错题与框架，不推新课","寒假 4 周集中推进：数制与编码 → 运算方法 → 存储系统 → 指令系统 → CPU → 总线 → I/O","重点章（存储系统 / 指令系统 / CPU）放寒假整块时间","W18 收口：全章串讲 + 真题选择 20 道 + 大题 2 道"],
+  quiz:["Cache 三种映射的地址划分各是什么？","流水线三类冒险怎么消除？","为什么补码能直接做加法？","IEEE 754 的阶码为什么要加偏移量？"]},
+
+{track:"cs408", when:"2027.01.25 – 2027.02.23（面板 W15–W19）", title:"408③ 操作系统（王道按真实时长，5 周）", deliv:"王道 OS 一轮 + PV 与银行家算法能手写",
+  kaoyan:"视频 25.0 h（1.5× ≈ 16.6 h）+ 课后题 13.3 h = 29.9 h。PV / 死锁 / 页面置换是 408 大题主力，一节不砍",
+  tasks:["进程与线程：PCB + 状态转换；FCFS/SJF/HRRN/RR 手算周转时间","同步互斥 + 死锁：信号量 → 生产者-消费者 → 读者-写者 → 哲学家 → 银行家算法","内存 + 虚拟内存：分页/分段/段页式 → FIFO/LRU/OPT/Clock 算缺页率","文件与 I/O：多级索引 + 磁盘调度 + SPOOLing","收口：PV + 银行家 + 地址转换 大题重做"],
+  quiz:["PV 操作里每个信号量的初值怎么定？","银行家算法判断能否分配的依据是什么？","FIFO 和 LRU 的缺页率为什么不同？","TLB、页表、Cache 的访问顺序是什么？"]},
+
+{track:"cs408", when:"2027.02.24 – 2027.04.02（面板 W19–W24）", title:"408④ 计算机网络（王道按真实时长，7 周）", deliv:"网络一轮完成，五层框架图能合书画出来",
+  kaoyan:"视频 34.9 h（1.5× ≈ 23.3 h）+ 课后题 18.6 h = 41.9 h。网络只占 25 分但视频最多",
+  tasks:["体系结构 + 物理层：OSI vs TCP/IP + 带宽/时延/RTT + 奈奎斯特与香农","数据链路层：CRC + 停止等待/后退N帧/选择重传 + CSMA/CD vs CA","网络层：IPv4 分片 + 子网/CIDR/路由聚合 + 最长前缀匹配 + 路由协议对比","传输层：三次握手/四次挥手 + 流量控制 + 拥塞控制四阶段","应用层：DNS + HTTP + DHCP；真题选择 20 道 + 大题 2 道"],
+  quiz:["TCP 三次握手为什么不能是两次？","拥塞控制四个阶段分别是什么？","子网划分后可用地址范围怎么算？"]},
+
+{track:"cs408", when:"2027.05.10 – 2027.06.27（面板 W30–W36）", title:"408 强化二刷 + 专题突破 + 收口", deliv:"四门错题清零 + 4 类专题过关 + 薄弱清单定稿 + 一次 180 min 全真",
+  kaoyan:"真题整卷已按 A 方案移到 2028.04 起（放在二轮之后，标准节奏 一轮→强化→二轮→真题）。这里 7 周只做「错题二刷 + 专题突破 + 收口」，不带新知识。",
+  tasks:["W30–W33 强化二刷：四门各一周，只做一轮 + 强化段的标星错题，不做新题","W34 专题①：虚拟内存三级联动（页表+TLB+Cache）+ 流水线时空图与加速比","W35 专题②：PV 经典模型手写 + 子网划分 CIDR/VLSM + TCP 拥塞窗口计算","W36 收口：四门框架默画 + 薄弱清单定稿 + 408 全真一套（180 min）+ 错题总清点"],
+  quiz:["四门里现在最弱的是哪一门？","虚拟内存 / 流水线 / PV / 子网这四类，哪几类还会卡？","薄弱清单里有没有超过 5 条的科目？"]},
+
+{track:"cs408", when:"2027.09 – 2028.03", title:"408⑤ 二轮：四本重刷 + 错题本", deliv:"四本二轮完成，错题清零一轮",
+  kaoyan:"暑假每周 3h 维护（共 27h）已把遗忘曲线压平，9 月开局直接进二轮，不回炉重讲。",
+  tasks:["按 数据结构 → 组成原理 → 操作系统 → 网络 的顺序二刷，每门约 7 周","难点重讲（不回炉全书）+ 课后错题 + 强化段标星题","王道《408 真题》按科目分类部分：按科目补漏，不做整卷（整卷在 2028.04 起）","整理高频考点清单（按四门各 20 条，考前就看这个）"],
+ quiz:["我四门里最弱的是哪一门？"]},
+
+{track:"cs408", when:"2028.04 – 12", title:"408⑥ 真题整卷首刷 + 二刷 + 模拟 + 冲刺", deliv:"15 年整卷首刷完成 → 二刷只做错题 → 上考场",
+ tasks:["2028.04–06 首刷：15 年整卷，3 套/周（选择 40 限时 60 min + 大题 7 限时 120 min + 订正）","复盘三分类：① 知识盲区 → 回王道对应小节 ② 计算失误 → 抄进「计算错」专页 ③ 审题错 → 只标题号不重做","2028.07 起二刷：只做错题 + 近 5 年整卷再计时","10 月后做模拟卷（王道模拟 / 其他）；考前两周只看高频考点清单 + 错题"],
+ quiz:["我真题稳定在多少分？","我失分最多的是哪一类（盲区/计算/审题）？"]},
+
+/* ================= 考研线 · 政治（徐涛） ================= */
+{track:"pol", when:"2028.7 – 8（暑假）", title:"政治① 徐涛强化班（核心考案）", deliv:"强化班过一遍，理解为主",
+ kaoyan:"政治不用早启动，但别晚过 9 月。启动后就每天固定 40 分钟",
+ tasks:["跟徐涛强化班视频 + 《核心考案》","顺序：马原 → 毛中特 → 史纲 → 思修法基","每天不超过 40 分钟（这科不靠堆时间）","马原部分要理解（哲学、政治经济学），别死背"],
+ quiz:["马原里最难理解的是哪一块？"]},
+
+{track:"pol", when:"2028.9 – 10", title:"政治② 刷选择题", deliv:"选择题正确率上 70%",
+ tasks:["徐涛《优题库》或肖1000题，只做选择题","错题标记，两周后重做错题","每天 40 分钟，不要挤占数学和 408 的时间","开始记时间线（史纲）"],
+ quiz:["我选择题正确率现在多少？"]},
+
+{track:"pol", when:"2028.11 – 12", title:"政治③ 徐涛冲刺背诵笔记 + 8套卷 + 押题", deliv:"上考场",
+ tasks:["《徐涛冲刺背诵笔记》（小黄书）背熟选择题考点","《徐涛8套卷》按套做选择题","大题：跟徐涛的押题 + 背肖四/徐涛20题（选一个，别都背）",
+  "时政（形势与政策 16 分）：11 月起跟徐涛时政课 + 每月时政小册，选择题里的时政题靠它","考前一周只背大题 + 看错题"],
+ quiz:["大题我是按什么框架答的？"]},
+
+];
+
+/* ================================================================ */
+/* 本地存储容错：隐私模式 / 某些 file:// 下读写 localStorage 会抛异常，
+   原来没有 try/catch → 第 564 行就中断 → 整个看板白屏。这里做兜底。 */
+const KEY = "dsh-plan-v3";
+let persistOK = true;
+const MEM = {};
+function lsGet(k){
+  try { return localStorage.getItem(k); } catch(e){ persistOK = false; return (k in MEM) ? MEM[k] : null; }
+}
+function lsSet(k, v){
+  try { localStorage.setItem(k, v); } catch(e){ persistOK = false; MEM[k] = String(v); }
+  /* ⭐ 2026-10-24：顺手记「这个键最后写于何时」，云同步合并时要逐键比时间（见 syncMerge） */
+  if (typeof syncStamp === "function") syncStamp(k);
+}
+let state = {};
+try { state = JSON.parse(lsGet(KEY) || "{}") || {}; } catch(e){ state = {}; }
+if (typeof state !== "object" || state === null || Array.isArray(state)) state = {};
+
+/* ⭐ 2026-10-18【勾选状态防错位】
+   勾选是按 `卡片序号|类型|任务序号`（uid）存的。卡片一增删或重排，序号就整体平移，
+   旧勾选会**错位挂到别的任务上**——比丢进度更糟，因为看不出来。
+   之前算法线重排把卡片从 86 张改成 77 张，正好踩到这个问题。
+   做法：把「卡片指纹」一起存；指纹对不上就丢弃旧状态，并给出提示。 */
+const FINGERPRINT = CARDS.length + ":" + CARDS.map(c => c.title).join("|").length;
+const FP_KEY = KEY + ":fp";
+const savedFP = lsGet(FP_KEY);
+let stateDiscarded = false;
+if (savedFP && savedFP !== FINGERPRINT){
+  state = {};
+  stateDiscarded = true;
+  lsSet(KEY, "{}");
+}
+lsSet(FP_KEY, FINGERPRINT);
+/* ==== 云同步开始 ====
+   和「今日面板」同一套协议、同一个 gist 文件（dsh-progress.json）、
+   同一组连接配置（dsh-sync-token / dsh-sync-gist），所以只要连一次，两边都通。
+   载荷里同时装 dsh-today-* 和 dsh-plan-*：从哪边推都不会把另一边从云端抹掉。 */
+var SYNC_TOKEN = "dsh-sync-token";
+var SYNC_GIST  = "dsh-sync-gist";
+var SYNC_AUTO  = "dsh-sync-auto";
+var SYNC_LAST  = "dsh-sync-last";
+var SYNC_FILE  = "dsh-progress.json";
+var SYNC_DESC  = "study-panel progress backup";
+var SYNC_API   = "https://api.github.com";
+var syncTimer  = null;
+
+/* 和今日面板逐字一致的排除规则，改一边就必须改另一边 */
+function syncWanted(k){
+  if (!k) return false;
+  if (k.indexOf("preview") >= 0 || k.indexOf("savedAt") >= 0) return false;
+  if (k.indexOf(":fp") >= 0) return false;
+  return k.indexOf("dsh-today-") === 0 || k.indexOf("dsh-plan-") === 0;
+}
+function humanTime(iso){
+  if (!iso) return "";
+  var t = new Date(iso).getTime();
+  if (isNaN(t)) return "";
+  var s = (Date.now() - t) / 1000;
+  if (s < 60) return "刚刚";
+  if (s < 3600) return Math.floor(s / 60) + " 分钟前";
+  if (s < 86400) return Math.floor(s / 3600) + " 小时前";
+  return Math.floor(s / 86400) + " 天前";
+}
+function syncCfg(){
+  return {
+    /* ⭐ 2026-10-24：首尾空白、"undefined" 这种残值都当没填 —— 否则 syncUI 会把
+       输入框藏起来（syncSetup display:none），用户既连不上也粘不了新 token。 */
+    token: syncClean(lsGet(SYNC_TOKEN)),
+    gist:  syncClean(lsGet(SYNC_GIST)),
+    auto:  lsGet(SYNC_AUTO) === "1",
+    last:  lsGet(SYNC_LAST)  || ""
+  };
+}
+/* 每个键的「最后写入时间」表 —— 合并的依据。
+   ⭐ 2026-10-24：和两个面板用同一套协议（同一个 key，所以看板和面板的时间戳天然一致）。 */
+var SYNC_META = "dsh-sync-meta";
+/* ⭐ 2026-10-25：本机是否真有改动（+ 代数）。syncDirty 为 false 时不排上传 ——
+   这是「push → merge → render → saveState → push 死循环烧掉 5000 次配额」的解药。
+   放在 SYNC_META 旁边，是为了让 .scripts/test_sync_merge.js 抠代码时一起带上。 */
+var syncDirty = false, syncGen = 0, syncLastPushAt = 0;
+var syncApplying = false;
+function syncMetaGet(){
+  if (!SYNC_META) return {};
+  try { return JSON.parse(lsGet(SYNC_META) || "{}") || {}; }
+  catch(e){ return {}; }
+}
+function syncMetaSet(m){
+  if (!SYNC_META) return;
+  lsSet(SYNC_META, JSON.stringify(m || {}));
+}
+function syncStamp(k){
+  if (syncApplying || !SYNC_META) return;
+  if (typeof syncWanted !== "function" || !syncWanted(k)) return;
+  var m = syncMetaGet();
+  m[k] = new Date().toISOString();
+  syncMetaSet(m);
+  /* 真的写了参与同步的键 → 标脏（syncTouch 只在这种情况下排上传） */
+  syncDirty = true;
+  syncGen++;
+}
+function syncCollect(){
+  var keys = {};
+  try {
+    for (var i = 0; i < localStorage.length; i++){
+      var k = localStorage.key(i);
+      if (!syncWanted(k)) continue;
+      var raw = localStorage.getItem(k);
+      if (!raw) continue;
+      var v = null;
+      try { v = JSON.parse(raw); } catch(e){ continue; }
+      /* ⭐ 2026-10-24：一次都没勾过的日期（{} / null）不上传 —— 它们只会把 gist 撑大，
+         而 GitHub 在 GET 时对 >1 MB 的文件返回 truncated（content 为空）。 */
+      if (!v || typeof v !== "object") continue;
+      if (!Array.isArray(v) && Object.keys(v).length === 0) continue;
+      keys[k] = v;
+    }
+  } catch(e){}
+  var mAll = syncMetaGet(), mKeep = {};
+  Object.keys(keys).forEach(function(k){ if (mAll[k]) mKeep[k] = mAll[k]; });
+  return { app: "dsh-plan-board", version: 2,
+           exportedAt: new Date().toISOString(), keys: keys, meta: mKeep };
+}
+/* 合并而不是覆盖：逐键比时间，谁新听谁的（原来整份覆盖，两台设备各勾一半 = 丢一半） */
+function syncMerge(payload){
+  if (!payload || typeof payload !== "object" || !payload.keys){
+    throw new Error("云端数据格式不对");
+  }
+  var rmeta = payload.meta || {};
+  var lmeta = syncMetaGet();
+  /* ⭐ 2026-10-24 首次合并的兜底：老版本没有 meta，本机键全是「时间未知」。
+     直接当成空就会让云端无条件覆盖、把这台机器刚勾的尽掉。
+     用「本机最后一次保存时间」（dsh-today-savedAt）当基线：它挖不出每键的真实时间，
+     但「这台机器最后一次写」这个上界足够判对大多数情况；一次合并后每键都有了真实时间。 */
+  var lBaseline = "";
+  try { var _bs = lsGet("dsh-today-savedAt"); if (typeof _bs === "string" && _bs.length > 10) lBaseline = _bs; } catch(e){}
+  var fallbackT = payload.exportedAt || new Date().toISOString();
+  var took = 0, kept = 0, same = 0;
+  syncApplying = true;
+  Object.keys(payload.keys).forEach(function(k){
+    if (!syncWanted(k)) return;
+    var rt = rmeta[k] || fallbackT;
+    var lt = lmeta[k] || lBaseline;
+    if (lt && lt > rt){ kept++; lmeta[k] = lt; return; }   /* 本机更新 → 保留本机（并记下判定点） */
+    if (lt && lt === rt) same++;
+    lsSet(k, JSON.stringify(payload.keys[k]));
+    lmeta[k] = rt;
+    took++;
+  });
+  syncMetaSet(lmeta);
+  /* 重新读回看板状态；指纹按本机当前结构重写，避免下一次加载误判「结构变了」 */
+  try {
+    var s2 = JSON.parse(lsGet(KEY) || "{}");
+    state = (s2 && typeof s2 === "object" && !Array.isArray(s2)) ? s2 : {};
+  } catch(e){ state = {}; }
+  lsSet(FP_KEY, FINGERPRINT);
+  if (typeof render === "function") render();
+  /* ⭐ 2026-10-25：apply 标志必须等 render 之后才落下（否则 render → save → syncTouch 无限回推） */
+  syncApplying = false;
+  return { took: took, kept: kept, same: same };
+}
+function syncApply(payload){ return syncMerge(payload).took; }
+function syncMsg(t, bad){
+  var el = document.getElementById("syncMsg");
+  if (!el) return;
+  el.textContent = t;
+  el.style.color = bad ? "#f85149" : "#3fb950";
+}
+function syncClean(v){
+  var t = String(v === undefined || v === null ? "" : v).trim();
+  if (!t || t === "undefined" || t === "null") return "";
+  return t;
+}
+/* 想重新粘 token 时把输入框放回来（连接成功后自动收起） */
+var syncForceSetup = false;
+function syncShowSetup(){
+  syncForceSetup = true;
+  var inp = document.getElementById("syncToken");
+  if (inp){ inp.value = ""; try { inp.focus(); } catch(e){} }
+  syncMsg("粘一个新的 token 再点「连接 / 创建云端备份」—— 旧的会作废");
+  syncUI();
+}
+function syncUI(){
+  var c = syncCfg();
+  var setup = document.getElementById("syncSetup");
+  var ops   = document.getElementById("syncOps");
+  var st    = document.getElementById("syncState");
+  var auto  = document.getElementById("syncAuto");
+  if (setup) setup.style.display = (c.token && c.gist && !syncForceSetup) ? "none" : "";
+  if (ops)   ops.style.display   = c.token ? "" : "none";
+  if (auto)  auto.checked = !!c.auto;
+  var apiEl = document.getElementById("syncApi");
+  if (apiEl && !apiEl.value) apiEl.value = (function(){ try { return lsGet(SYNC_API_KEY) || ""; } catch(e){ return ""; } })();
+  var nKeys = 0;
+  try { for (var i = 0; i < localStorage.length; i++) if (syncWanted(localStorage.key(i))) nKeys++; } catch(e){}
+  var coolLeft = 0, quotaTxt = "";
+  try {
+    coolLeft = syncCoolLeft();
+    var qq = syncQuota();
+    if (!coolLeft && qq) quotaTxt = " · 配额剩 " + qq.remaining + "/5000";
+  } catch(e){}
+  var stateTxt = c.token
+    ? ("已连接 · 本机 " + nKeys + " 项" + (c.last ? " · 上次 " + humanTime(c.last) : "")
+       + (c.auto ? " · 自动同步开（切回页面即拉取）" : " · ⚠️ 自动同步关着：只能手动上传/下载")
+       + (coolLeft > 0 ? (" · ⏳ 限流至 " + syncClock(coolLeft)) : quotaTxt))
+    : "未连接";
+  if (st) st.textContent = stateTxt;
+  /* 页头那个状态也要刷，否则从顶部看不出连没连 */
+  var st2 = document.getElementById("syncTopState");
+  if (st2){
+    st2.textContent = c.token
+      ? ("已连接" + (c.last ? " · 上次 " + humanTime(c.last) : ""))
+      : "未连接";
+    st2.style.color = c.token ? "#3fb950" : "#8b949e";
+  }
+}
+function syncOpen(){
+  var p = document.getElementById("syncPanel");
+  if (!p) return;
+  var open = (p.style.display === "none" || !p.style.display);
+  p.style.display = open ? "block" : "none";
+  if (open && p.scrollIntoView){
+    try { p.scrollIntoView({ behavior: "smooth", block: "center" }); } catch(e){ p.scrollIntoView(); }
+  }
+  syncUI();
+}
+/* ⭐ 2026-10-24：报错要能看懂 —— 401/403/404/超时 各自对应不同的改法，原文只有一句英文。
+   接口地址可改（dsh-sync-api）：api.github.com 被拦时填自己的代理。 */
+var SYNC_API_KEY = "dsh-sync-api";
+function syncApiBase(){
+  var v = "";
+  try { v = lsGet(SYNC_API_KEY) || ""; } catch(e){}
+  v = String(v).trim().replace(/\/+$/, "");
+  return v || SYNC_API;
+}
+function syncApiSave(){
+  var el = document.getElementById("syncApi");
+  if (!el) return;
+  var v = String(el.value || "").trim().replace(/\/+$/, "");
+  lsSet(SYNC_API_KEY, v);
+  syncMsg(v ? ("接口地址已改成 " + v + "，点「🌐 测连通性」验证") : "接口地址已恢复默认 https://api.github.com");
+}
+function syncExplain(status, msg, base){
+  var m = String(msg || "");
+  if (status === 401) return "token 无效或已过期（401 Bad credentials）→ 重新生成一个，复制时别带空格、别少字符";
+  if (status === 403 && /rate.?limit/i.test(m)) return "请求太频繁（403 rate limit）→ 等一小时再试；也确认 token 真的生效了";
+  if (status === 403) return "token 权限不够（403：" + m + "）→ classic token 要勾 gist；fine-grained 要勾 Gists: Read and write";
+  if (status === 404) return "接口 404（" + m + "）→ 通常不是「找不到」，而是网络被中间设备拦了；先点「🌐 测连通性」";
+  if (status >= 500) return "GitHub 服务端出错（" + status + "）→ 过几分钟再试";
+  return m || ("HTTP " + status + " · " + base);
+}
+/* ---------------- 配额 / 限流（2026-10-25） ----------------
+   报错「API rate limit exceeded for user ID …」= 这个账号这一小时的 5000 次用完了，
+   不是 token 错。用完只能等 reset，所以面板要做两件事：少发请求、到了就停。
+     · 条件请求：GET 带 If-None-Match，云端没变回 304 —— 304 **不扣配额**，轮询几乎免费
+     · 冷静期：403/429 读 x-ratelimit-reset，到点前自动拉/上传全部短路，并告诉用户几点恢复 */
+var SYNC_QUOTA = "dsh-sync-quota", SYNC_COOL = "dsh-sync-cool";
+var SYNC_ETAG = "dsh-sync-etag", SYNC_LASTPULL = "dsh-sync-lastpull";
+function syncNum(v){ var n = parseInt(v, 10); return isNaN(n) ? null : n; }
+function syncNoteQuota(meta){
+  if (!meta) return;
+  try {
+    if (typeof meta.remaining === "number" && meta.reset){
+      lsSet(SYNC_QUOTA, JSON.stringify({ remaining: meta.remaining, reset: meta.reset }));
+    }
+    if ((meta.status === 403 || meta.status === 429) && meta.reset){ lsSet(SYNC_COOL, String(meta.reset)); }
+    else if (meta.status === 429 && meta.retryAfter){ lsSet(SYNC_COOL, String(Math.floor(Date.now() / 1000) + meta.retryAfter)); }
+  } catch(e){}
+}
+function syncCoolLeft(){
+  var until = 0;
+  try { until = syncNum(lsGet(SYNC_COOL)) || 0; } catch(e){}
+  var left = until * 1000 - Date.now();
+  return left > 0 ? left : 0;
+}
+function syncClock(ms){
+  var d = new Date(Date.now() + ms);
+  var h = d.getHours(), m = d.getMinutes();
+  return (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
+}
+function syncCoolMsg(ms){
+  return "⏳ GitHub 配额用完了（每小时 5000 次），" + syncClock(ms) + " 之后自动恢复 —— 这期间点多少次都是这个结果，先别点，等它。";
+}
+function syncQuota(){
+  var q = null;
+  try { q = JSON.parse(lsGet(SYNC_QUOTA) || "null"); } catch(e){}
+  if (!q || typeof q.remaining !== "number") return null;
+  if (q.reset && Date.now() / 1000 > q.reset) return { remaining: 5000, reset: q.reset };
+  return q;
+}
+function syncEtagGet(gid){
+  try {
+    var o = JSON.parse(lsGet(SYNC_ETAG) || "null");
+    return (o && o.id === gid && o.etag) ? o.etag : null;
+  } catch(e){ return null; }
+}
+function syncEtagSet(gid, etag){
+  if (!etag || !gid) return;
+  try { lsSet(SYNC_ETAG, JSON.stringify({ id: gid, etag: etag })); } catch(e){}
+}
+function syncFailMsg(e){
+  var left = syncCoolLeft();
+  if (left > 0) return syncCoolMsg(left);
+  return (e && e.message) ? e.message : String(e);
+}
+/* opt2 可以带 headers（条件请求）和 meta（要回执，而不是只要 json） */
+function syncReq(method, path, body, opt2){
+  var c = syncCfg();
+  var base = syncApiBase();
+  var wantsMeta = !!(opt2 && opt2.meta);
+  var opt = { method: method, cache: "no-store", headers: {
+    "Authorization": "Bearer " + c.token,
+    "Accept": "application/vnd.github+json" } };
+  if (opt2 && opt2.headers){
+    for (var hk in opt2.headers){
+      if (opt2.headers.hasOwnProperty(hk) && opt2.headers[hk]) opt.headers[hk] = opt2.headers[hk];
+    }
+  }
+  if (body){
+    opt.headers["Content-Type"] = "application/json";
+    opt.body = JSON.stringify(body);
+  }
+  /* 12 秒超时：不加的话「网络被拦」会一直转圈，看起来像卡死 */
+  var ctl = null;
+  try { ctl = new AbortController(); opt.signal = ctl.signal; } catch(e){}
+  var tid = setTimeout(function(){ if (ctl){ try { ctl.abort(); } catch(e){} } }, 12000);
+  return fetch(base + path, opt).then(function(r){
+    var h = r.headers;
+    var meta = {
+      status: r.status,
+      etag: (h && h.get) ? h.get("etag") : null,
+      remaining: syncNum((h && h.get) ? h.get("x-ratelimit-remaining") : null),
+      reset: syncNum((h && h.get) ? h.get("x-ratelimit-reset") : null),
+      retryAfter: syncNum((h && h.get) ? h.get("retry-after") : null)
+    };
+    syncNoteQuota(meta);
+    /* 304 = 云端没变，而且不计入配额 */
+    if (r.status === 304) return { status: 304, notModified: true, etag: meta.etag, json: null };
+    return r.text().then(function(t){
+      var j = null;
+      try { j = JSON.parse(t); } catch(e){}
+      if (!r.ok){
+        var m = (j && j.message) ? j.message : ("HTTP " + r.status);
+        var err = new Error(syncExplain(r.status, m, base));
+        err.status = r.status;
+        err.rateLimited = (r.status === 403 || r.status === 429) && /rate.?limit/i.test(m);
+        /* token 失效就把输入框亮出来，别让用户对着「已连接」干瞪眼 */
+        if (r.status === 401 && typeof syncForceSetup !== "undefined"){ syncForceSetup = true; syncUI(); }
+        throw err;
+      }
+      return wantsMeta ? { status: r.status, json: j, etag: meta.etag, notModified: false } : j;
+    });
+  })["catch"](function(e){
+    if (e && e.status) throw e;
+    if (e && e.name === "AbortError") throw new Error("超时 12 秒：连不上 " + base + "（网络被拦 / 需要代理）");
+    throw new Error("网络到不了 " + base + "（" + ((e && e.message) ? e.message : "Failed to fetch") + "）：多半是 api.github.com 被拦，换网络或填代理地址");
+  })["then"](function(v){ clearTimeout(tid); return v; },
+             function(e){ clearTimeout(tid); throw e; });
+}
+/* 先测网络、再测 token：一步定位到底卡在哪 */
+function syncSelfTest(){
+  var base = syncApiBase(), c = syncCfg();
+  syncMsg("正在测 " + base + " …");
+  var t0 = Date.now();
+  var ctl = null, opt = { cache: "no-store", headers: { "Accept": "application/vnd.github+json" } };
+  try { ctl = new AbortController(); opt.signal = ctl.signal; } catch(e){}
+  var tid = setTimeout(function(){ if (ctl){ try { ctl.abort(); } catch(e){} } }, 12000);
+  fetch(base + "/zen", opt).then(function(r){
+    return r.text().then(function(t){
+      if (!r.ok) throw new Error(syncExplain(r.status, String(t || "").slice(0, 80), base));
+      var ms = Date.now() - t0;
+      var zen = String(t || "").trim().slice(0, 40);
+      if (!c.token){
+        syncMsg("✅ 网络通（" + ms + " ms）：" + zen + " · 还没填 token，填完点「连接 / 创建云端备份」");
+        return null;
+      }
+      syncMsg("✅ 网络通（" + ms + " ms）· 接着验 token …");
+      return syncReq("GET", "/user").then(function(u){
+        syncMsg("✅ 全通：网络 " + ms + " ms · token 属于 " + ((u && u.login) ? u.login : "?") + " → 现在点「连接 / 创建云端备份」");
+      });
+    });
+  })["catch"](function(e){
+    if (e && e.name === "AbortError"){ syncMsg("❌ 超时 12 秒：连不上 " + base + "（网络被拦 / 要开代理）", true); return; }
+    syncMsg("❌ " + ((e && e.message) ? e.message : e), true);
+  })["then"](function(){ clearTimeout(tid); }, function(){ clearTimeout(tid); });
+}
+function syncGistBody(){
+  var payload = syncCollect();
+  var files = {};
+  files[SYNC_FILE] = { content: JSON.stringify(payload, null, 2) };
+  return { files: files };
+}
+/* 连接时先找账号里「已有的」那份备份 —— 换设备时最怕的就是又新建一份空的，
+   结果旧数据拉不回来。只有确实没有旧备份，才用本机数据新建。 */
+function syncConnect(){
+  var inp = document.getElementById("syncToken");
+  var tok = String((inp && inp.value) || "").trim();
+  if (!tok){ syncMsg("先粘贴 token", true); return; }
+  lsSet(SYNC_TOKEN, tok);
+  syncMsg("正在验证 token …");
+  syncReq("GET", "/user").then(function(u){
+    syncMsg("已登录：" + u.login + "，正在查找已有的云端备份 …");
+    return syncReq("GET", "/gists?per_page=100").then(function(list){
+      return { login: u.login, list: list };
+    });
+  }).then(function(r){
+    var found = null;
+    (r.list || []).forEach(function(g){
+      if (found || !g) return;
+      if (g.description === SYNC_DESC && g.files && g.files[SYNC_FILE]) found = g;
+    });
+    if (found){
+      /* 接上旧备份：只记 id，不上传（本机可能是空的，传上去就把云端抹了） */
+      lsSet(SYNC_GIST, found.id);
+      lsSet(SYNC_LAST, new Date().toISOString());
+      syncMsg("已接上你以前的云端备份 ✅ 点「⬇️ 从云下载」把勾选拉回来（先别上传，会把云端覆盖成空）");
+      syncForceSetup = false;
+      syncUI();
+      return null;
+    }
+    syncMsg("没有找到旧的备份，正在创建第一份 …");
+    return syncReq("POST", "/gists", {
+      description: SYNC_DESC,
+      public: false,
+      files: syncGistBody().files
+    }).then(function(g){
+      lsSet(SYNC_GIST, g.id);
+      lsSet(SYNC_LAST, new Date().toISOString());
+      syncMsg("连接成功，已创建云端备份 ✅");
+      syncForceSetup = false;
+      syncUI();
+    });
+  })["catch"](function(e){
+    lsSet(SYNC_TOKEN, "");
+    syncMsg("连接失败：" + e.message, true);
+    syncUI();
+  });
+}
+function syncPush(silent, force){
+  var c = syncCfg();
+  if (!c.token || !c.gist){
+    if (!silent) syncMsg("还没连接", true);
+    return Promise.resolve(false);
+  }
+  /* ⭐ 2026-10-25：没有「本机真改过」就不上传。boot 的第一次用 syncPush(true, true) 强制。 */
+  if (silent && !force && !syncDirty) return Promise.resolve(false);
+  var gen = syncGen;
+  var cool = syncCoolLeft();
+  if (cool > 0){
+    if (!silent) syncMsg(syncCoolMsg(cool), true);
+    return Promise.resolve(false);
+  }
+  if (!silent) syncMsg("正在同步 …");
+  /* ⭐ 2026-10-24：上传前先 GET 一次、把云端合进来，再 PATCH。
+     原来直接 PATCH = 整份覆盖，「手机推 A、电脑推 B」后推的会把另一边抹掉。
+     ⭐ 2026-10-25：这次 GET 带 If-None-Match —— 云端没变时 304，不扣配额。 */
+  syncBusy = true;
+  var etag = syncEtagGet(c.gist);
+  return syncReq("GET", "/gists/" + c.gist, null,
+                 { headers: etag ? { "If-None-Match": etag } : null, meta: true }).then(function(res){
+    var merge = Promise.resolve(null);
+    if (res && res.notModified){
+      merge = Promise.resolve(null);          /* 云端没变：不用合，直接上传本机 */
+    } else {
+      syncEtagSet(c.gist, res && res.etag);
+      merge = syncParseCloud(res && res.json).then(function(p){
+        if (!p || !p.keys) return null;
+        try { return syncMerge(p); } catch(e){ return null; }
+      });
+    }
+    return merge.then(function(mr){
+      return syncReq("PATCH", "/gists/" + c.gist, syncGistBody(), { meta: true }).then(function(pr){
+        syncEtagSet(c.gist, pr && pr.etag);
+        lsSet(SYNC_LAST, new Date().toISOString());
+        syncLastPushAt = Date.now();
+        if (gen === syncGen) syncDirty = false;
+        if (!silent){
+          syncMsg("已同步 ✅" + (mr
+            ? "（云端合入 " + mr.took + " 项 · 本机更新保留 " + mr.kept + " 项）"
+            : ""));
+        }
+        syncUI();
+        return true;
+      });
+    });
+  })["catch"](function(e){
+    /* 自动上传失败时只在「限流 / token 失效」这种需要人管的情况下才弹提示 */
+    if (!silent || (e && (e.rateLimited || e.status === 401))) syncMsg("同步失败：" + syncFailMsg(e), true);
+    return false;
+  })["then"](function(v){ syncBusy = false; return v; },
+             function(e){ syncBusy = false; throw e; });
+}
+/* ---------------- 跨设备实时同步补丁（2026-10-24） ----------------
+   症状：手机上勾的，电脑上看不到；电脑上勾的，手机上也没有。
+   根因不是合并逻辑，而是**另一台设备只在打开页面时拉一次**：勾完只是「推」上去，
+   页面开着的那台机器从来不会主动去云端取。这里补三处自动拉：
+     · 切回页面（手机解锁 / 切标签）
+     · 窗口获得焦点
+     · 两台都开着时，每 60 秒拉一次（只在页面可见、且开了自动同步时）
+   还堵了两个会让同步「完全没反应」的坑：
+     · GET gist 对 >1 MB 的文件返回 truncated、content 为空，JSON.parse 抛错又被空 catch
+       吞掉 → 合并静默跳过，双方各推各的。现在遇到 truncated 改走 raw_url 取全文。
+     · 从没勾过的日期（{}）不再上传，省得把文件撑大。 */
+var syncBusy = false, syncPullTimer = null;
+function syncParseCloud(g){
+  var f = g && g.files && g.files[SYNC_FILE];
+  if (!f) return Promise.resolve(null);
+  var txt = f.truncated ? "" : (f.content || "");
+  if (txt){
+    try { return Promise.resolve(JSON.parse(txt)); } catch(e){}
+  }
+  if (!f.raw_url) return Promise.resolve(null);
+  var url = f.raw_url + (f.raw_url.indexOf("?") < 0 ? "?" : "&") + "_=" + Date.now();
+  return fetch(url, { cache: "no-store" }).then(function(r){
+    return r.ok ? r.text() : "";
+  }).then(function(t){
+    try { return JSON.parse(t); } catch(e){ return null; }
+  });
+}
+function syncPull(silent){
+  var c = syncCfg();
+  if (!c.token || !c.gist){ if (!silent) syncMsg("还没连接", true); return Promise.resolve(false); }
+  var cool = syncCoolLeft();
+  if (cool > 0){
+    if (!silent) syncMsg(syncCoolMsg(cool), true);
+    return Promise.resolve(false);
+  }
+  if (!silent) syncMsg("正在下载 …");
+  var etag = syncEtagGet(c.gist);
+  return syncReq("GET", "/gists/" + c.gist, null,
+                 { headers: etag ? { "If-None-Match": etag } : null, meta: true }).then(function(res){
+    if (res && res.notModified){
+      lsSet(SYNC_LAST, new Date().toISOString());
+      if (!silent) syncMsg("已是最新（云端没变，304 不扣配额）✅");
+      syncUI();
+      return { took: 0, kept: 0, same: true };
+    }
+    syncEtagSet(c.gist, res && res.etag);
+    return syncParseCloud(res && res.json).then(function(payload){
+      if (!payload || !payload.keys) throw new Error("云端没有可用的 " + SYNC_FILE);
+      var r = syncMerge(payload);
+      lsSet(SYNC_LAST, new Date().toISOString());
+      if (r.took){
+        syncMsg("☁ 已把另一台设备的 " + r.took + " 项合并进来"
+                + (r.kept ? "（本机更新的 " + r.kept + " 项保留）" : "") + " ✅");
+      } else if (!silent){
+        syncMsg("已是最新：云端 " + Object.keys(payload.keys).length + " 项"
+                + (r.kept ? " · 本机更新的 " + r.kept + " 项保留" : "") + " ✅");
+      }
+      syncUI();
+      return r;
+    });
+  })["catch"](function(e){ if (!silent) syncMsg("下载失败：" + syncFailMsg(e), true); return false; });
+}
+/* 自动拉：只在页面可见时做；和上传共用 syncBusy，避免两个请求交叉 */
+function syncAutoPull(){
+  var c = syncCfg();
+  if (!c.token || !c.gist) return Promise.resolve(false);
+  if (syncBusy) return Promise.resolve(false);
+  if (typeof document !== "undefined" && document.visibilityState === "hidden") return Promise.resolve(false);
+  /* 限流冷静期：静默跳过，不再打扰用户 */
+  if (syncCoolLeft() > 0) return Promise.resolve(false);
+  /* 配额快用完就收手，把剩下的留给手动操作 */
+  var q = syncQuota();
+  if (q && q.remaining < 40) return Promise.resolve(false);
+  /* 多标签页/多页面：25 秒内只要有一个真去拉过，其它的就跳过 */
+  var last = 0;
+  try { last = syncNum(lsGet(SYNC_LASTPULL)) || 0; } catch(e){}
+  if (Date.now() - last < 25000) return Promise.resolve(false);
+  try { lsSet(SYNC_LASTPULL, String(Date.now())); } catch(e){}
+  syncBusy = true;
+  return syncPull(true)["then"](function(r){ syncBusy = false; return r; },
+                                function(){ syncBusy = false; return false; });
+}
+function syncArmPull(){
+  var c = syncCfg();
+  if (!c.token || !c.gist) return;
+  if (syncPullTimer){ clearInterval(syncPullTimer); syncPullTimer = null; }
+  if (typeof document !== "undefined" && document.addEventListener && !document.__syncArmed){
+    document.__syncArmed = true;
+    document.addEventListener("visibilitychange", function(){
+      if (document.visibilityState === "visible") syncAutoPull();
+    });
+    window.addEventListener("focus", syncAutoPull);
+    window.addEventListener("online", syncAutoPull);
+  }
+  if (c.auto) syncPullTimer = setInterval(syncAutoPull, 60000);
+}
+function syncToggleAuto(){
+  var el = document.getElementById("syncAuto");
+  lsSet(SYNC_AUTO, (el && el.checked) ? "1" : "0");
+  /* ⭐ 2026-10-24：开关一变就重挂 / 卸掉定时拉，不用刷新页面 */
+  if (typeof syncArmPull === "function") syncArmPull();
+  syncUI();
+}
+function syncTouch(){
+  var c = syncCfg();
+  if (!c.auto || !c.token || !c.gist) return;
+  /* 三道门：合并中不推、没真改动不推、正在推就让它推完 */
+  if (syncApplying) return;
+  if (!syncDirty) return;
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(function(){ syncPush(true); }, 4000);
+}
+function syncForget(){
+  if (!confirm("断开云同步？本机勾选不会丢，只是不再和云端同步。")) return;
+  lsSet(SYNC_TOKEN, ""); lsSet(SYNC_GIST, ""); lsSet(SYNC_AUTO, "0");
+  syncMsg("已断开");
+  syncUI();
+}
+/* ==== 云同步结束 ==== */
+let filterTrack = null;
+const grid = document.getElementById("grid");
+const archBox = document.getElementById("archbox");
+const archList = document.getElementById("archlist");
+const archTitle = document.getElementById("archtitle");
+const chips = document.getElementById("chips");
+const uid = (ci, ti, kind) => ci + "|" + kind + "|" + ti;
+const save = () => {
+  lsSet(KEY, JSON.stringify(state));
+  /* 开了云同步就防抖 4 秒推一次；typeof 保护防 TDZ（syncTouch 在后面才定义） */
+  /* ⭐ 2026-10-25：合并引起的写入（syncMerge → render → saveState）绝不能排上传 */
+  if (!syncApplying && typeof syncTouch === "function") syncTouch();
+};
+
+function drawGantt(){
+  const box = document.getElementById("gantt");
+  box.innerHTML = "";
+  LANES.forEach(lane => {
+    const t = TRACKS[lane.track];
+    const row = document.createElement("div");
+    row.className = "lane";
+    row.innerHTML = '<div class="laneName" style="color:' + t.color + '">' + (lane.name || t.name) + "</div>" +
+                    '<div class="laneBody"></div>';
+    const body = row.querySelector(".laneBody");
+    lane.segs.forEach(s => {
+      const seg = document.createElement("div");
+      seg.className = "seg" + (s.kind ? " " + s.kind : "");
+      seg.style.left = (s.start / SPAN * 100) + "%";
+      seg.style.width = (s.len / SPAN * 100) + "%";
+      seg.style.background = (s.kind === "ml") ? "#39d353"
+                          : (s.kind === "dl") ? "#a371f7"
+                          : (s.kind === "data") ? "#58a6ff"
+                          : (s.kind === "proj") ? "#f0883e"
+                          : (s.kind === "pause") ? "#484f58"
+                          /* 算法轨（2026-10-18 C 方案）：base 基础课 / improve 提高课 / icpc 进阶课 / contest 冲刺 */
+                          : (s.kind === "base") ? "#f0883e"
+                          : (s.kind === "improve") ? "#d29922"
+                          : (s.kind === "icpc") ? "#bc8cff"
+                          : (s.kind === "contest") ? "#f85149"
+                          : t.color;
+      seg.textContent = s.label;
+      /* AI 轨在段右上角加 ML / DL / 工程 等小标，让「哪里开始学机器学习」一眼能看到 */
+      if ((lane.track === "ai" || lane.track === "algo") && s.kind){
+        const badge = document.createElement("span");
+        badge.className = "kind";
+        badge.textContent = {
+          eng: "工程", data: "数据", ml: "ML", dl: "DL", proj: "项目", pause: "暂停",
+          base: "基础", improve: "提高", icpc: "进阶", contest: "冲刺",
+        }[s.kind] || "";
+        seg.appendChild(badge);
+      }
+      seg.title = s.tip || s.label;
+      body.appendChild(seg);
+    });
+    box.appendChild(row);
+  });
+  const ax = document.createElement("div");
+  ax.className = "axis";
+  ax.innerHTML = "<span>2026.10</span><span>2027.6</span><span>2028.3</span><span>2028.12 初试</span>";
+  box.appendChild(ax);
+}
+
+/* 历史卡判定：9.19–9.21 反复重排 AI 线留下的「已并入 / 补充资源 / 保留备查」卡 */
+function isArchived(c){
+  return c.track === "ai" && /已并入|补充资源|保留备查/.test(c.when);
+}
+
+function makeList(container, items, ci, kind){
+  items.forEach((text, ti) => {
+    const id = uid(ci, ti, kind);
+    const li = document.createElement("li");
+    if (state[id]) li.classList.add("done");
+    li.innerHTML = '<input type="checkbox" ' + (state[id] ? "checked" : "") + '><span>' + text + "</span>";
+    const toggle = () => { if (state[id]) delete state[id]; else state[id] = true; save(); render(); };
+    li.querySelector("input").addEventListener("change", toggle);
+    li.querySelector("span").addEventListener("click", toggle);
+    container.appendChild(li);
+  });
+}
+
+function render(){
+  drawGantt();
+  grid.innerHTML = "";
+  archList.innerHTML = "";
+  /* ⭐ 2026-10-18：AI 轨有 14 张「已并入 / 补充资源 / 保留备查」的历史卡，
+     内容是 9.19–9.21 反复重排 AI 线时留下的，与正式卡重复。
+     不直接删除的原因：勾选进度按**卡片序号**存在 localStorage，删卡会让后面全部错位。
+     所以改成「折叠归档 + 不计入总进度」——既不干扰视线，也不丢已有勾选。 */
+  let archCount = 0;
+  CARDS.forEach((c, ci) => {
+    if (filterTrack && c.track !== filterTrack) return;
+    const t = TRACKS[c.track];
+    const all = (c.tasks || []).map((_, ti) => uid(ci, ti, "t")).concat((c.quiz || []).map((_, ti) => uid(ci, ti, "q")));
+    const done = all.filter(k => state[k]).length;
+    const complete = all.length > 0 && done === all.length;
+
+    const el = document.createElement("div");
+    el.className = "card" + (complete ? " complete" : "");
+    el.innerHTML =
+      '<div class="top" style="background:' + t.color + '"></div>' +
+      '<div class="inner">' +
+        '<div class="row1">' +
+          '<span class="when">' + c.when + "</span>" +
+          '<span class="tk" style="background:' + t.color + '22;color:' + t.color + '">' + t.short + "</span>" +
+          '<span class="cnt">' + done + "/" + all.length + "</span>" +
+        "</div>" +
+        '<div class="ttl">' + c.title + "</div>" +
+        '<div class="deliv">产出：<b>' + (c.deliv || "—") + "</b></div>" +
+        (c.kaoyan ? '<div class="ky">' + c.kaoyan + "</div>" : "") +
+        "<ul></ul>" +
+      "</div>";
+    makeList(el.querySelector("ul"), c.tasks || [], ci, "t");
+    if ((c.quiz || []).length){
+      const det = document.createElement("details");
+      det.innerHTML = "<summary>自测（能不看资料答出来再打勾）</summary><ul></ul>";
+      makeList(det.querySelector("ul"), c.quiz, ci, "q");
+      el.querySelector(".inner").appendChild(det);
+    }
+    if (isArchived(c)) { archList.appendChild(el); archCount++; }
+    else grid.appendChild(el);
+  });
+  archBox.style.display = archCount ? "block" : "none";
+  archTitle.textContent = "归档：" + archCount + " 张「已并入 / 保留备查」的历史卡（不参与总进度）";
+  updateStats();
+}
+
+function updateStats(){
+  const all = [];
+  CARDS.forEach((c, ci) => {
+    if (isArchived(c)) return;   /* 归档卡不计入总进度（2026-10-18） */
+    c.tasks.forEach((_, ti) => all.push(uid(ci, ti, "t")));
+    c.quiz.forEach((_, ti) => all.push(uid(ci, ti, "q")));
+  });
+  const done = all.filter(k => state[k]).length;
+  const pct = all.length ? Math.round(done / all.length * 100) : 0;
+  document.getElementById("barfill").style.width = pct + "%";
+  document.getElementById("pct").textContent = pct + "%";
+  document.getElementById("count").textContent = "已完成 " + done + " / " + all.length + " 项";
+
+  let next = null;
+  outer:
+  for (let ci = 0; ci < CARDS.length; ci++){
+    if (filterTrack && CARDS[ci].track !== filterTrack) continue;
+    for (const kind of ["t", "q"]){
+      const arr = kind === "t" ? CARDS[ci].tasks : CARDS[ci].quiz;
+      for (let ti = 0; ti < arr.length; ti++){
+        if (!state[uid(ci, ti, kind)]){ next = {c: CARDS[ci], text: arr[ti]}; break outer; }
+      }
+    }
+  }
+  document.getElementById("nextbox").innerHTML = next
+    ? '下一件该做的事：<b>' + next.text + "</b> <span style='color:#68737f'>（" + next.c.when + " · " + next.c.title + "）</span>"
+    : "🎉 全部完成 —— 该上考场了。";
+
+  chips.innerHTML = "";
+  const allChip = document.createElement("div");
+  allChip.className = "chip" + (filterTrack === null ? " active" : "");
+  allChip.innerHTML = "全部线 <span class='n'>" + done + "/" + all.length + "</span>";
+  allChip.onclick = () => { filterTrack = null; render(); };
+  chips.appendChild(allChip);
+
+  Object.keys(TRACKS).forEach(tid => {
+    const idxs = CARDS.map((c, i) => c.track === tid ? i : -1).filter(i => i >= 0);
+    if (!idxs.length) return;
+    let total = 0, d = 0;
+    idxs.forEach(i => {
+      const c = CARDS[i];
+      total += (c.tasks || []).length + (c.quiz || []).length;
+      (c.tasks || []).forEach((_, ti) => { if (state[uid(i, ti, "t")]) d++; });
+      (c.quiz || []).forEach((_, ti) => { if (state[uid(i, ti, "q")]) d++; });
+    });
+    const t = TRACKS[tid];
+    const c2 = document.createElement("div");
+    c2.className = "chip" + (filterTrack === tid ? " active" : "");
+    c2.innerHTML = "<span class='dot' style='background:" + t.color + "'></span>" + t.name +
+                   " <span class='n'>" + idxs.length + " 张卡 · " + d + "/" + total + "</span>";
+    c2.onclick = () => { filterTrack = (filterTrack === tid ? null : tid); render(); };
+    chips.appendChild(c2);
+  });
+}
+
+function expandAll(open){ document.querySelectorAll("details").forEach(d => d.open = open); }
+function clearAll(){
+  if (!confirm("确定清空所有勾选？（不可撤销）")) return;
+  state = {}; save(); render();
+}
+
+/* 任何脚本错误都显示在页面上，而不是白屏 */
+window.onerror = function (msg, src, line, col) {
+  var el = document.getElementById("count");
+  if (el) el.innerHTML = '<b style="color:#f85149">看板出错了：</b>' + msg + "（位置 " + (src || "?") + ":" + line + ":" + col + "）";
+  return false;
+};
+
+try {
+  render();
+  /* 连接状态和今日面板共用（同一个 localStorage），所以这里一加载就能显示「已连接」 */
+  syncUI();
+  /* ⭐ 2026-10-24：开了自动同步的话，打开页面静默同步一次（先合并再上传，不会覆盖本机更新的部分）。
+     这样「手机上勾了、电脑上一打开就看到」，不用每次手动点下载。 */
+  try {
+    var _ac = syncCfg();
+    if (_ac.auto && _ac.token && _ac.gist) setTimeout(function(){ syncPush(true, true); }, 1200);
+  /* ⭐ 2026-10-24：另一台设备的勾选不会自己跑过来 —— 挂上「切回页面 / 获得焦点 / 每 60 秒」的自动拉 */
+  if (_ac.token && _ac.gist) setTimeout(syncArmPull, 1500);
+  } catch(e){}
+  if (!persistOK) {
+    var cc = document.getElementById("count");
+    if (cc) cc.innerHTML += ' &nbsp;<b style="color:#f0883e">⚠️ 本机浏览器禁用了本地存储：勾选只在本次打开期间有效</b>';
+  }
+  /* 卡片指纹变了 → 旧勾选作废（否则会错位挂到别的任务上），这里必须说清楚，不能让进度"凭空消失" */
+  if (stateDiscarded) {
+    var cd = document.getElementById("count");
+    if (cd) cd.innerHTML += ' &nbsp;<b style="color:#f0883e">⚠️ 计划结构变了（算法线重排），旧勾选已作废避免错位；请重新勾选</b>';
+  }
+} catch (e) {
+  var el2 = document.getElementById("count");
+  if (el2) el2.innerHTML = '<b style="color:#f85149">看板启动失败：</b>' + e.message + "（按 Ctrl+F5 刷新）";
+}
+</script>
+</body>
+</html>
