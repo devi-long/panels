@@ -4044,6 +4044,28 @@ function dsLabelFor(items, w, fin, d){
   return base.replace("（期末复习）", "") + " + " + extra.join(" + ");
 }
 
+/* 「本周概览」里英语那行：跟 408 一样按真实排期现算，不再用手写的 w.en。
+   手写的 enMaterial 停在「英一 2005 年起」，而 readTextFor() 的序列是 1997 年起
+   （材料计划 1997–2024 精读、2025–2027 留模考）→ 实测 126/132 天概览年份 ≠ 当天条目。
+   现算之后，改 READ_SEQ 概览自动跟着走。 */
+function enWeekItems(){
+  const wi2 = weekIndex(cur);
+  const start = new Date(START.getTime() + wi2 * 7 * DAY);
+  const w2 = WEEKS[Math.max(0, Math.min(wi2, WEEKS.length - 1))] || {};
+  /* 手写里除「英X：YYYY 年阅读 …」之外的条目照留（红宝书/长难句/听力/复盘…） */
+  const keep = (w2.en || []).filter(function(x){ return !/英[一二]：\d{4} 年阅读/.test(String(x)); });
+  const seen = {}, read = [];
+  for (let i = 0; i < 7; i++){
+    const dd = new Date(start.getTime() + i * DAY);
+    let t = "";
+    try { t = readTextFor(dd); } catch(e){ t = ""; }
+    if (!t || seen[t]) continue;
+    seen[t] = 1;
+    read.push({ t: t });
+  }
+  return read.concat(keep.map(function(x){ return { t: x }; }));
+}
+
 /* 「本周概览」里 408 那行：也要按 WD_MAP 汇总，不能再用旧的 w.ds
    （否则会出现「概览写王道 3.1 栈、下面是王道 1.1」这种自相矛盾）。 */
 function dsWeekItems(){
@@ -5659,7 +5681,8 @@ function render(){
          原来 math 没有分支 → 落进最后的 else → 数学块显示了 AI 的周计划
          （现象：「AI 学习」和「数学」两块内容一模一样）。
          数学的内容来自 mathItems()，不是 w.math —— 所以单独取。 */
-      const v = b.src === "en"  ? (w.en || []).join("｜")
+      /* 英语概览不截断：一周 5 条（2 篇精读 + 红宝书 + 长难句 + 复盘），截断会把周四/五那篇吞掉 */
+      const v = b.src === "en"  ? enWeekItems().map(function(x){ return x.t; }).join("｜")
               : b.src === "ds"  ? brief(dsWeekItems())
               : b.src === "algo"? brief(w.algo)
               : b.src === "ai"  ? brief(w.ai)
