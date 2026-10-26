@@ -164,6 +164,9 @@
   .pkg .later b{color:#c6d0da}
   .pkg .no{margin-top:10px;padding-top:9px;border-top:1px dashed #2a323c}
   .pkg .no b{color:#ff9a91}
+.pkg .grp{margin-top:14px;padding-top:10px;border-top:1px dashed #2a323c;font-size:13px;font-weight:700;color:#e6edf3}
+.pkg .grp:first-of-type{border-top:none;margin-top:2px;padding-top:0}
+.pkg h2{cursor:default;user-select:none}
   @media (max-width:720px){
     .pkg{padding:12px 13px}
     .pkg .txt{font-size:13px}
@@ -253,6 +256,7 @@
   <div class="adapt" id="adaptBox" style="display:none"></div>
   <div class="blocks" id="blocks"></div>
   <div class="pkg" id="pkgBox" style="display:none"></div>
+  <div class="pkg" id="buyBox" style="display:none"></div>
   <div class="empty" id="emptyBox" style="display:none"></div>
   <div style="text-align:center;margin-top:14px">
     <button id="previewBtn" onclick="startPreview(nextActiveOffset())" style="display:none;background:#1c232c;color:#e6edf3;border:1px solid #4a5568;border-radius:9px;padding:9px 18px;cursor:pointer;font-size:13px;font-family:inherit">👀 跳到下一个有内容的日子（试勾，不影响正式进度）</button>
@@ -5351,8 +5355,10 @@ const PKG_WINDOWS = [
    sub:"W9（12-21）起红宝书一轮、W14（01-18）起每天 1 篇真题阅读 —— 这两样这周得先在手边。",
    items:[
      {k:"d1", q:1, t:"红宝书（纸质）或 墨墨 / 不背单词词库（二选一，别再下 PDF 扫描版）", due:"12-21 前", hot:1},
-     {k:"d2", q:2, t:"英一真题（近 20 年，张剑黄皮书一类）", due:"01-18 前"},
-     {k:"d3", q:3, t:"四级出分后定第六条：六级 2027-06 那场还考不考（考 → 六级真题按 W23 起排）", due:"12 月底看分"}
+     {k:"d2", q:2, t:"<b>英一真题 2005–2024</b>：张剑黄皮书《历年考研英语真题解析》（世纪高教）· <b>要「试题册 + 解析册」分册装订的版本</b>。<br>一刷在试题册上随便划，<b>解析册保持干净</b>；选它的理由是你计划里那句「逐题定位：正确项为什么对、干扰项错在哪」，黄皮书的干扰项逐句剖析对得上。英语基础一般（四级刚过）可换<b>考研真相</b>（高教社），全文翻译更省查词时间。<br>⚠️ <b>1997–2004 这 8 年不用买书</b>：那几年题型跟现在差得远，只用来打精读基本功，免费 PDF 够。", due:"12-14 前", hot:1},
+     {k:"d4", q:3, t:"<b>空白试卷</b>（黄皮书试卷版，或自己印 2005–2024 单套）：第二阶段要刷到「三刷 · 近八年」，<b>一刷笔迹会让二刷正确率虚高 15–20 分</b>。黄皮书纸张偏薄、二次批注会透墨，所以这份不是可选项。", due:"01-10 前", hot:1},
+     {k:"d5", q:4, t:"错题本改电子：<b>Notion 一张表</b>（字段只要 <b>年份 | 题型 | 错因</b>，错因固定用几个：定位错 / 偷换 / 词不认识 / 审题漏 / 时间不够）+ 平板手写批注 App（安卓：Xodo 或 云记）。面板里 <b>76 处</b>要求「错 2 次以上的题抄进薄弱清单」——纸本两个月后你一定会放弃翻。", due:"12-21 前"},
+     {k:"d3", q:5, t:"四级出分后定第六条：六级 2027-06 那场还考不考（考 → 六级真题按 W23 起排）", due:"12 月底看分"}
    ]},
   {tag:"cet4", from:"2026-12-05", to:"2026-12-12", kind:"exam", hold:0,
    title:"🎫 四级考前清单", note:"12-12 考试 · 少一样都进不去考场",
@@ -5482,20 +5488,97 @@ function renderPkg(){
     h += '<div class="row' + (on ? " done" : "") + '">' +
          '<input type="checkbox" data-k="' + x.k + '"' + (on ? ' checked="checked"' : "") + ">" +
          '<span class="q">' + x.q + "</span>" +
-         '<span class="txt">' + esc(x.t) +
+         '<span class="txt">' + x.t +
          '<span class="due' + (x.hot ? " hot" : "") + '">' + esc(x.due) + "</span></span></div>";
   });
   h += '<div class="bar2"><i style="width:' + Math.round(doneN / w.items.length * 100) + '%"></i></div>';
   /* 考前清单不是采购卡，别把「W36 之后才买的」和「明确别买」两段贴上去 */
   if (w.kind !== "exam"){
     h += '<details><summary>W36（2027-06-27）之后才买的（面板管不到，看板里有日程）</summary><div class="later">' +
-         PKG_LATER.map(([d, t]) => "<b>" + esc(d) + "</b> → " + esc(t)).join("<br>") +
+         PKG_LATER.map(([d, t]) => "<b>" + d + "</b> → " + t).join("<br>") +
          "</div></details>";
     h += '<div class="no"><b>明确别买：</b>' + PKG_NO.map(esc).join(" · ") + "</div>";
   }
   box.innerHTML = h;
   box.querySelectorAll(".row input").forEach(inp => {
     inp.addEventListener("change", () => pkgToggle(inp.getAttribute("data-k")));
+  });
+}
+
+/* 🛒 买书清单（全部批次一次看全）—— 2026-10-25 用户要求
+   ----------------------------------------------------------------------------
+   上面那张「本周采购卡」只在对应时间窗出现、买齐就收起，翻不回去；
+   而「我到底还要买啥」是随时要查的问题。
+
+   ⚠️ 数据只有一份：这里直接摊开 PKG_WINDOWS（跳过 kind:"exam" 的四级考前清单），
+      勾选写回同一份 dsh-pkg-<tag>-v1 —— 在这里打勾，上面那张卡也同步少一条。
+      （两套数据各存一份的教训见「本周概览 vs 当天精读条目」那次 bug。） */
+function buyGroups(){
+  return PKG_WINDOWS.filter(function(w){ return w.kind !== "exam"; });
+}
+function buyDone(x, st){ return x.pre ? (st[x.k] !== false) : !!st[x.k]; }
+function buyToggle(tag, k){
+  const st = pkgState(tag);
+  if (st[k]) delete st[k]; else st[k] = 1;
+  try { lsSet(pkgKey(tag), JSON.stringify(st)); } catch(e){}
+  renderBuy();
+  if (typeof renderPkg === "function") renderPkg();
+}
+let buyExpanded = null;
+function buyNeg(){
+  /* 默认展开：用户要的就是「一眼看到还要买啥」；只有他手动收起过（存了 "0"）才保持收起 */
+  if (buyExpanded === null) buyExpanded = (lsGet("dsh-buy-open") !== "0");
+  buyExpanded = !buyExpanded;
+  try { lsSet("dsh-buy-open", buyExpanded ? "1" : "0"); } catch(e){}
+  renderBuy();
+}
+function renderBuy(){
+  const box = document.getElementById("buyBox");
+  if (!box) return;
+  /* 默认展开：用户要的就是「一眼看到还要买啥」；只有他手动收起过（存了 "0"）才保持收起 */
+  if (buyExpanded === null) buyExpanded = (lsGet("dsh-buy-open") !== "0");
+  const gs = buyGroups();
+  if (!gs.length){ box.style.display = "none"; box.innerHTML = ""; return; }
+  let total = 0, done = 0;
+  gs.forEach(function(w){
+    const st = pkgState(w.tag);
+    w.items.forEach(function(x){ total++; if (buyDone(x, st)) done++; });
+  });
+  const left = total - done;
+  box.style.display = "block";
+  let h = '<h2 onclick="buyNeg()" style="cursor:pointer">🛒 买书清单（全部）' +
+          '<span class="cnt2">还差 ' + left + " / 共 " + total + "</span>" +
+          '<span style="font-size:12px;font-weight:400;color:#9aa7b4">' +
+          (left === 0 ? "全买齐了 ✅" : (buyExpanded ? "点标题收起" : "点标题展开 · 打勾会同步到每周采购卡")) +
+          "</span></h2>";
+  if (buyExpanded){
+    gs.forEach(function(w){
+      const st = pkgState(w.tag);
+      const ln = w.items.filter(function(x){ return !buyDone(x, st); }).length;
+      h += '<div class="grp">' + esc(w.title) +
+           '　<span style="color:#9aa7b4;font-weight:400">' + esc(w.note) + "</span>" +
+           (ln === 0 ? '　<span style="color:#3fb950">已齐 ✅</span>' : '　<span style="color:#e3b341">还差 ' + ln + " 件</span>") +
+           "</div>";
+      if (w.sub) h += '<div class="sub" style="margin:3px 0 6px">' + w.sub + "</div>";
+      w.items.forEach(function(x){
+        const on = buyDone(x, st);
+        h += '<div class="row' + (on ? " done" : "") + '">' +
+             '<input type="checkbox" data-t="' + w.tag + '" data-k="' + x.k + '"' + (on ? ' checked="checked"' : "") + ">" +
+             '<span class="q">' + x.q + "</span>" +
+             '<span class="txt">' + x.t +
+             '<span class="due' + (x.hot ? " hot" : "") + '">' + esc(x.due) + "</span></span></div>";
+      });
+    });
+    h += '<details><summary>W36（2027-06-27）之后才买的</summary><div class="later">' +
+         PKG_LATER.map(function(r){ return "<b>" + r[0] + "</b> → " + r[1]; }).join("<br>") +
+         "</div></details>";
+    h += '<div class="no"><b>明确别买：</b>' + PKG_NO.map(esc).join(" · ") + "</div>";
+  }
+  box.innerHTML = h;
+  box.querySelectorAll(".row input").forEach(function(inp){
+    inp.addEventListener("change", function(){
+      buyToggle(inp.getAttribute("data-t"), inp.getAttribute("data-k"));
+    });
   });
 }
 
@@ -5519,6 +5602,7 @@ function render(){
   /* 「课上加时」只在课表已知窗口内存在（≤ 2027-01-24）；之后转成 408 自学时间 */
   const classKnown = !fin && cur <= CLASS_KNOWN_TO;
   renderPkg();   /* 📦 材料采购提醒：4 个时间窗，只在对应那周出现，买齐自动收起 */
+  renderBuy();   /* 🛒 买书清单（全部）：数据同源，勾选互通 */
 
   document.getElementById("dateTitle").textContent =
     fmt(cur) + " · " + WD[dow] + (isToday ? "（今天）" : (cur < today0 ? "（已过 · 可补勾）" : ""));
