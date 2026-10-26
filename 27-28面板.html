@@ -5755,6 +5755,40 @@ function capTemplate(tpl, d){
   return cp;
 }
 
+/* ⭐ 2026-10-25【周日补课日】本周欠账清单：遍历本周一~周六，重建那天的条目，
+   和 localStorage 里的勾选比对，列出真实漏掉的条目。每次渲染重算 —— 勾掉一条就少一条。 */
+function p2MakeupItems(d){
+  const out = [];
+  if (!d) return ["本周欠账：把本周一~周六漏勾的条目补完（先清最近的）"];
+  const missAll = [], head = [];
+  for (let i = 6; i >= 1; i--){
+    const dd = new Date(d.getTime() - i * DAY);
+    if (dd.getDay() === 0) continue;                    /* 周日自己不算 */
+    const wi2 = weekIndex(dd);
+    const w2 = (typeof WEEKS !== "undefined" && wi2 >= 0) ? WEEKS[Math.min(wi2, WEEKS.length - 1)] : null;
+    let bl = [];
+    try { bl = dayBlocks(dd.getDay(), w2, false, isFinal(dd), wi2, dd); } catch(e){ bl = []; }
+    const items = [];
+    bl.forEach(function(b){ (b.items || []).forEach(function(t){ items.push(t); }); });
+    let st = {};
+    try { st = JSON.parse(lsGet(KEY(fmt(dd))) || "{}") || {}; } catch(e){ st = {}; }
+    const miss = items.filter(function(t){ return !st[t]; });
+    head.push(WD[dd.getDay()] + " " + (items.length - miss.length) + "/" + items.length);
+    miss.forEach(function(t){
+      const s = String(t);
+      missAll.push(WD[dd.getDay()] + "：" + (s.length > 56 ? s.slice(0, 56) + "…" : s));
+    });
+  }
+  out.push("算法 10 min：本周卡住的那 2 个模板各默写一遍（只默写卡住的，别把一讲全默一遍）");
+  out.push("本周欠账 " + missAll.length + " 条（" + head.join(" · ") + "）");
+  missAll.slice(0, 8).forEach(function(t){ out.push(t); });
+  if (missAll.length > 8) out.push("还有 " + (missAll.length - 8) + " 条 —— 先把上面 8 条清完，别一口气全看");
+  if (missAll.length > 20) out.push("⚠️ 欠了 20 条以上就别按条清了：改成按科目清 —— 数学 1 讲 + 408 1 章 + 英一 1 篇，剩下的顺延到下周");
+  if (!missAll.length) out.push("本周没欠账 🎉 那就把本周错题重做一遍（不看题解），剩下的时间自己安排");
+  out.push("规矩：欠账没清完不开新章 —— 宁可少学一节，不要两头都欠");
+  return out;
+}
+
 function dayBlocks(dow, w, adapting, fin, wi, d){
   /* ⭐⭐ 弹性日（每月第 4 个周日）直接替换当天全部内容：3 块共 3 h。 */
   if (!adapting && isFlexDay(d)) return flexBlocks();
@@ -5835,6 +5869,22 @@ function dayBlocks(dow, w, adapting, fin, wi, d){
         "下周只改一件事：________（只写一件，写多了等于没写）",
       ],
     });
+  }
+
+  /* ⭐ 2026-10-25【周日 = 补课日】周日不做算法块，欠账清单并进「本周复盘」块。
+     分钟从摘掉的算法块里出：摘掉多少给多少（最多 20 min），一分钟没摘出来就维持 10 min ——
+     绝不把轻日变重（第一阶段的教训：单独开 60 min 块，19 个周日各 +60~90 min）。 */
+  if (!adapting && dow === 0 && d){
+    const hadAlgo = out.some(function(x){ return x.src === "algo"; });
+    out.filter(function(x){ return x.src === "algo"; }).forEach(function(x){
+      out.splice(out.indexOf(x), 1);
+    });
+    const rv = out[out.length - 1];
+    if (rv && rv.src === "review"){
+      rv.nm = "📋 本周复盘 · 补欠账";
+      rv.min = hadAlgo ? 20 : 10;
+      rv.items = p2MakeupItems(d).concat(["—— 下面是本周复盘 ——"]).concat(rv.items || []);
+    }
   }
   return out;
 }
